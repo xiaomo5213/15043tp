@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>知识点媒体采集台 · 中国近现代史纲要</title>
+<style>
+  :root{
+    --red:#e23b3b; --gold:#e9b949; --blue:#5b8cff; --purple:#9a6bff; --green:#35c08a;
+    --ink:#f4f1e8; --dim:#9aa3c4; --bg0:#05081a;
+    --line:rgba(255,255,255,0.10); --card:rgba(18,24,52,0.88);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;min-height:100%;
+    background:
+      radial-gradient(900px 600px at 12% 0%, rgba(122,64,210,0.28), transparent 60%),
+      radial-gradient(900px 700px at 88% 8%, rgba(46,120,225,0.22), transparent 62%),
+      radial-gradient(900px 700px at 60% 100%, rgba(225,60,150,0.14), transparent 60%),
+      var(--bg0);
+    color:var(--ink);font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;font-size:14px;}
+  body{padding-bottom:40px;}
+  a{color:#9fc0ff;text-decoration:none;}
+  button{font-family:inherit;}
+
+  /* ---------- 顶栏 ---------- */
+  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);
+    background:linear-gradient(180deg,rgba(6,10,30,0.96),rgba(6,10,30,0.82));
+    border-bottom:1px solid var(--line);padding:10px 14px 0;}
+  .hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .brand{font-size:15.5px;font-weight:700;letter-spacing:.4px;
+    background:linear-gradient(90deg,var(--gold),var(--red));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .brand small{display:block;font-size:11px;color:var(--dim);font-weight:400;letter-spacing:0;background:none;-webkit-text-fill-color:var(--dim);}
+  .grow{flex:1 1 auto;}
+  .prog{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);}
+  .prog b{color:var(--gold);font-size:13px;}
+  .pbar{width:110px;height:6px;border-radius:4px;background:rgba(255,255,255,0.12);overflow:hidden;}
+  .pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--red));transition:width .25s;}
+  .btn{border:1px solid var(--line);background:rgba(255,255,255,0.06);color:#e8ecff;
+    padding:7px 12px;border-radius:9px;font-size:12.5px;cursor:pointer;transition:.18s;}
+  .btn:hover{background:rgba(255,255,255,0.14);}
+  .btn.primary{border-color:rgba(233,185,73,0.55);background:rgba(233,185,73,0.14);color:#ffe4a8;}
+  .btn.primary:hover{background:rgba(233,185,73,0.26);}
+  .btn.ghost{background:transparent;}
+
+  /* ---------- 筛选 ---------- */
+  .filters{padding:8px 0 9px;display:flex;flex-direction:column;gap:7px;}
+  .frow{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;}
+  .frow::-webkit-scrollbar{display:none;}
+  .frow .lab{flex:none;font-size:11.5px;color:var(--dim);margin-right:2px;}
+  .chip{flex:none;border:1px solid var(--line);background:rgba(255,255,255,0.04);color:#cfd6f2;
+    padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;transition:.16s;}
+  .chip:hover{border-color:rgba(255,255,255,0.3);}
+  .chip.on{border-color:var(--gold);background:rgba(233,185,73,0.18);color:#ffe6b0;}
+  .chip .n{opacity:.62;font-size:11px;margin-left:3px;}
+  .chip.p1.on{border-color:var(--red);background:rgba(226,59,59,0.2);color:#ffc9c9;}
+  #q{flex:1 1 160px;min-width:130px;border:1px solid var(--line);background:rgba(0,0,0,0.35);
+    color:var(--ink);padding:7px 11px;border-radius:9px;font-size:12.5px;outline:none;font-family:inherit;}
+  #q:focus{border-color:var(--blue);}
+
+  /* ---------- 列表 ---------- */
+  main{max-width:1020px;margin:0 auto;padding:12px 14px 0;}
+  .grp{margin:18px 0 8px;}
+  .grp h2{font-size:14.5px;margin:0 0 6px;display:flex;align-items:center;gap:9px;font-weight:600;}
+  .grp h2 .bar{width:3px;height:15px;border-radius:2px;background:var(--gold);}
+  .grp .tip{font-size:12px;color:#8f9abf;line-height:1.8;background:rgba(91,140,255,0.07);
+    border-left:2px solid rgba(91,140,255,0.5);padding:7px 11px;border-radius:0 8px 8px 0;margin:6px 0 10px;}
+  .grp .tip b{color:#b9c9ff;font-weight:500;}
+
+  .row{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:10px;
+    transition:border-color .2s,box-shadow .2s;}
+  .row:hover{border-color:rgba(255,255,255,0.2);}
+  .row.done{border-color:rgba(53,192,138,0.34);box-shadow:inset 0 0 0 1px rgba(53,192,138,0.08);}
+  .row.hide{display:none;}
+  .rh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .num{font-size:11px;color:#7c86ab;font-variant-numeric:tabular-nums;letter-spacing:.5px;}
+  .pri{font-size:10.5px;padding:2px 7px;border-radius:6px;letter-spacing:.3px;}
+  .pri.p1{background:rgba(226,59,59,0.18);color:#ff9f9f;border:1px solid rgba(226,59,59,0.42);}
+  .pri.p2{background:rgba(233,185,73,0.14);color:#f0d69a;border:1px solid rgba(233,185,73,0.36);}
+  .pri.p3{background:rgba(255,255,255,0.05);color:#98a1c2;border:1px solid rgba(255,255,255,0.12);}
+  .hit{font-size:10.5px;color:#7f8ab0;}
+  .rt{font-size:14.5px;font-weight:600;line-height:1.5;flex:1 1 100%;color:#fff;}
+  .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.16);margin-left:auto;flex:none;align-self:center;}
+  .row.done .dot{background:var(--green);box-shadow:0 0 10px rgba(53,192,138,0.8);}
+  .sum{margin:6px 0 0;font-size:12.5px;line-height:1.85;color:#c3cae6;}
+  details.more{margin-top:6px;}
+  details.more summary{font-size:11.5px;color:#7f8ab0;cursor:pointer;list-style:none;user-select:none;}
+  details.more summary::-webkit-details-marker{display:none;}
+  details.more summary:hover{color:var(--blue);}
+  details.more p{font-size:12.5px;line-height:1.95;color:#a9b2d2;margin:7px 0 0;padding:9px 11px;
+    background:rgba(255,255,255,0.04);border-radius:8px;}
+
+  .find{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:9px;}
+  .find .lab{font-size:11px;color:#7f8ab0;}
+  .kw{border:1px solid rgba(91,140,255,0.34);background:rgba(91,140,255,0.10);color:#bcd0ff;
+    padding:3px 8px;border-radius:6px;font-size:11.5px;cursor:pointer;}
+  .kw:hover{background:rgba(91,140,255,0.22);}
+  .sbtn{border:1px solid var(--line);background:rgba(255,255,255,0.04);color:#c8d1ef;
+    padding:3px 8px;border-radius:6px;font-size:11.5px;}
+  .sbtn:hover{border-color:var(--blue);color:#fff;background:rgba(91,140,255,0.16);}
+  .form{font-size:11px;color:#8b95b8;border:1px dashed rgba(255,255,255,0.16);padding:3px 8px;border-radius:6px;}
+
+  .take{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .take .fld{display:flex;flex-direction:column;gap:4px;}
+  .take label{font-size:11px;color:#8b95b8;display:flex;align-items:center;gap:5px;}
+  .take label .cnt{color:var(--green);font-size:10.5px;}
+  .take textarea{width:100%;resize:vertical;min-height:34px;border:1px solid var(--line);border-radius:8px;
+    background:rgba(0,0,0,0.36);color:#e6ebff;padding:7px 9px;font-size:12px;line-height:1.7;
+    font-family:inherit;outline:none;}
+  .take textarea::placeholder{color:#5d6688;}
+  .take textarea:focus{border-color:var(--blue);background:rgba(0,0,0,0.5);}
+  .take textarea.filled{border-color:rgba(53,192,138,0.4);}
+  .take .wide{grid-column:1 / -1;}
+  .hintline{font-size:10.5px;color:#6f799c;grid-column:1 / -1;line-height:1.7;}
+
+  /* ---------- 配图需求单 ---------- */
+  .ip{margin-top:9px;border:1px solid rgba(154,107,255,0.22);background:rgba(154,107,255,0.065);
+    border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:7px;}
+  .ip.noimg{border-color:rgba(255,255,255,0.11);background:rgba(255,255,255,0.028);}
+  .ip-h{display:flex;gap:8px;align-items:flex-start;line-height:1.7;}
+  .ipt{flex:none;font-size:10.5px;padding:2px 7px;border-radius:6px;letter-spacing:.3px;
+    background:rgba(154,107,255,0.2);color:#d3c1ff;border:1px solid rgba(154,107,255,0.36);}
+  .ip.noimg .ipt{background:rgba(255,255,255,0.06);color:#98a1c2;border-color:rgba(255,255,255,0.14);}
+  .ip-ask{font-size:12px;color:#cfc7e9;line-height:1.8;}
+  .ip-k{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .ik{font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;
+    border:1px solid rgba(233,185,73,0.3);background:rgba(233,185,73,0.09);color:#f0d69a;}
+  .ik:hover{background:rgba(233,185,73,0.22);}
+  .ik::after{content:" ⌕";opacity:.55;font-size:10px;}
+  .ip-s{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .is{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);
+    background:rgba(255,255,255,0.04);color:#c8d1ef;}
+  .is:hover{border-color:var(--blue);color:#fff;background:rgba(91,140,255,0.16);}
+  .ip-fn{font-size:10.5px;color:#828cb0;cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.22);
+    padding-bottom:1px;font-family:Consolas,monospace;margin-left:2px;}
+  .ip-fn:hover{color:#bcd0ff;border-bottom-color:var(--blue);}
+  .ip-no{font-size:10.5px;color:#e0a37a;line-height:1.7;}
+  .dfig{margin:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:rgba(0,0,0,0.3);}
+  .dfig img{display:block;width:100%;max-height:160px;object-fit:cover;}
+  .dfig figcaption{padding:6px 9px;font-size:11.5px;color:#d7def5;line-height:1.6;}
+  .dfig figcaption small{display:block;font-size:10.5px;color:#8ea4cf;margin-top:2px;}
+  .dfig.bad img{display:none;}
+  .dfig.bad::before{content:"图片未找到 · 检查路径或文件名";display:block;padding:16px 10px;font-size:11px;
+    color:#e0a37a;text-align:center;}
+
+  .empty{text-align:center;color:#6f799c;font-size:13px;padding:60px 0;}
+
+  /* ---------- 预览弹窗 ---------- */
+  .modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:rgba(2,5,18,0.72);backdrop-filter:blur(4px);padding:20px;}
+  .modal.open{display:flex;}
+  .mbox{width:min(430px,100%);max-height:86vh;overflow:auto;background:rgba(14,19,44,0.99);
+    border:1px solid rgba(255,255,255,0.14);border-radius:16px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,0.6);}
+  .mbox h3{margin:0 0 4px;font-size:17px;}
+  .mbox .sub{font-size:11.5px;color:#7f8ab0;margin-bottom:14px;}
+  .msec{margin-bottom:15px;}
+  .mlbl{font-size:11.5px;color:#a9b2d2;margin-bottom:6px;}
+  .mtxt{font-size:13px;line-height:1.95;color:#dfe3f7;}
+  .vlist{display:flex;flex-direction:column;gap:7px;}
+  .vitem{display:flex;gap:9px;align-items:center;padding:8px 10px;border-radius:10px;
+    border:1px solid rgba(226,59,59,0.28);background:rgba(226,59,59,0.09);color:#ffd9d9;font-size:12.5px;}
+  .vitem .ic{width:22px;height:22px;flex:none;border-radius:6px;background:rgba(226,59,59,0.28);
+    display:flex;align-items:center;justify-content:center;font-size:11px;}
+  .vitem small{display:block;color:#b98d8d;font-size:10.5px;margin-top:2px;}
+  .ditem{display:flex;gap:9px;align-items:center;padding:8px 10px;border-radius:10px;
+    border:1px solid rgba(91,140,255,0.3);background:rgba(91,140,255,0.1);color:#d3e0ff;font-size:12.5px;}
+  .ditem .ic{width:22px;height:22px;flex:none;border-radius:6px;background:rgba(91,140,255,0.28);
+    display:flex;align-items:center;justify-content:center;font-size:11px;}
+  .mclose{width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid var(--line);
+    background:rgba(255,255,255,0.06);color:#dfe3f7;cursor:pointer;font-size:13px;}
+  .mnote{font-size:11.5px;color:#8f9abf;line-height:1.8;margin-top:10px;}
+
+  @media(max-width:640px){
+    .take{grid-template-columns:1fr;}
+    main{padding:10px 10px 0;}
+    .prog .pbar{width:70px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <div class="brand">知识点媒体采集台<small>15043 中国近现代史纲要 · 467 个知识点</small></div>
+    <div class="grow"></div>
+    <div class="prog"><span>已采 <b id="pDone">0</b>/<span id="pAll">467</span></span><div class="pbar"><i id="pBarI"></i></div></div>
+  </div>
+  <div class="hrow" style="margin-top:8px;">
+    <button class="btn primary" id="btnExport">⬇ 导出 media.js</button>
+    <button class="btn" id="btnCopy">复制 JSON</button>
+    <button class="btn ghost" id="btnPreview">卡片预览</button>
+    <div class="grow"></div>
+    <span style="font-size:11px;color:#6f799c;">自动保存在本机浏览器</span>
+  </div>
+  <div class="filters">
+    <div class="frow" id="fCh"><span class="lab">章节</span></div>
+    <div class="frow" id="fPri"></div>
+    <div class="frow" id="fSt"></div>
+    <div class="frow"><input id="q" placeholder="搜标题 / 说明 / 关键词，如「辛亥」" /></div>
+  </div>
+</header>
+
+<main id="list"></main>
+
+<div class="modal" id="modal">
+  <div class="mbox" id="mbox"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="kp_seed.js"></script>
+<script src="img_plan.js" onerror="window.KP_IMG=[]"></script>
+<script>
+(function(){
+  var SEED = (window.KP_SEED||[]);
+  var KP = (typeof knowledge!=='undefined')? knowledge : [];
+  var CHM = (typeof chapterMeta!=='undefined')? chapterMeta : {};
+  var ORDER = (typeof chapterOrder!=='undefined')? chapterOrder : [];
+  var KEY = 'xs15043:media';
+  /* 配图需求单（img_plan.js）：i -> {it,ask,ik,src,no,fn,noimg} */
+  var IMG = {};
+  (window.KP_IMG||[]).forEach(function(o){ IMG[o.i]=o; });
+
+  /* ---------------- 章节影像库建议（按编/章给片源） ---------------- */
+  var TIPS = {
+    intro:'<b>片源方向</b>：综述类。《百年中国》《复兴之路》第一集、《国家记忆》开篇；先建立 1840—1949—1978—新时代 的时间轴。',
+    c1:'<b>片源方向</b>：纪录片《鸦片战争》《圆明园》《复兴之路》第二集；电影《林则徐》《甲午大海战》；史料看《南京条约》影印件、虎门销烟图、时局图。',
+    c2:'<b>片源方向</b>：纪录片《太平天国》（央视）、《晚清秘史》；《天朝田亩制度》《资政新篇》原文图片；注意评价口径以教材为准。',
+    c3:'<b>片源方向</b>：电影《辛亥革命》（2011）、《走向共和》相关片段；纪录片《孙中山》；史料看《中华民国临时约法》原件照片、黄花岗七十二烈士墓。',
+    c4:'<b>片源方向</b>：《觉醒年代》对应集（新文化运动、五四）；电影《我的1919》；《新青年》封面、巴黎和会照片。',
+    c5:'<b>片源方向</b>：《建党伟业》《南昌起义》《秋收起义》《长征》；纪录片《苦难辉煌》；一大旧址、红船照片。',
+    c6:'<b>片源方向</b>：纪录片《东方主战场》《抗日战争》；《国家记忆·南京大屠杀》；影视《八佰》《南京！南京！》（艺术加工多，只取氛围）。',
+    c7:'<b>片源方向</b>：《大决战》三部曲、《解放战争》（文献片）、《建国大业》；史料看三大战役地图、渡江战役照片。',
+    c8:'<b>片源方向</b>：《国家记忆·开国大典》《抗美援朝》《一五计划》；《我们走在大路上》前几集；《论十大关系》原文。',
+    c9:'<b>片源方向</b>：《必由之路》《我们一起走过——致敬改革开放40年》《历史转折中的邓小平》；小岗村、深圳老照片。',
+    c10:'<b>片源方向</b>：《领航》《非凡十年》《大国重器》；十八大以来大事记图解；注意选取官方媒体版本。'
+  };
+
+  /* ---------------- 存储 ---------------- */
+  var DB = {};
+  try{ DB = JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ DB={}; }
+  var saveTimer=null;
+  function save(){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(function(){
+      try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
+    },350);
+  }
+
+  /* ---------------- 行格式解析：每行一条，标题 | 链接或图片路径 | 备注 ---------------- */
+  var MEDIA_RE = /^(https?:\/\/|\.{0,2}\/|media\/)|\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$/i;
+  function parseLines(txt){
+    var out=[];
+    String(txt||'').split(/\n+/).forEach(function(line){
+      line=line.trim(); if(!line) return;
+      var segs=(line.indexOf('|')>=0||line.indexOf('｜')>=0)
+        ? line.split(/\s*[|｜]\s*/)
+        : line.split(/\s{2,}/);
+      segs=segs.map(function(s){return s.trim();}).filter(Boolean);
+      var title='',url='',note='';
+      segs.forEach(function(seg){
+        if(!url && MEDIA_RE.test(seg)){ url=seg; }
+        else if(!title){ title=seg; }
+        else if(!note){ note=seg; }
+        else { note+=' '+seg; }
+      });
+      if(!title && url) title=url.split('/').pop();
+      out.push({t:title,u:url,n:note});
+    });
+    return out;
+  }
+  function linesFrom(arr){
+    return (arr||[]).map(function(x){
+      if(!x.u) return x.t||'';
+      return [x.t,x.u,x.n].filter(Boolean).join(' | ');
+    }).join('\n');
+  }
+
+  /* ---------------- 建列表 ---------------- */
+  var listEl=document.getElementById('list');
+  var byCh={}, counts={P1:0,P2:0,P3:0}, doneByPri={P1:0,P2:0,P3:0}, doneAll=0;
+  SEED.forEach(function(s){
+    (byCh[s.ch]=byCh[s.ch]||[]).push(s);
+    counts[s.p]=(counts[s.p]||0)+1;
+  });
+
+  var html='';
+  ORDER.forEach(function(ch){
+    var arr=byCh[ch]; if(!arr||!arr.length) return;
+    var meta=CHM[ch]||{};
+    html+='<section class="grp" data-gch="'+ch+'"><h2><span class="bar" style="background:'+(meta.color||'#e9b949')+'"></span>'
+      +(meta.title||ch)+' <span style="font-size:11px;color:#7f8ab0;font-weight:400;">'+arr.length+' 个知识点</span></h2>'
+      +(TIPS[ch]?'<div class="tip">'+TIPS[ch]+'</div>':'');
+    arr.forEach(function(s){
+      var kws=s.k.map(function(k){return '<span class="kw" data-kw="'+esc(k)+'" title="点击复制">'+esc(k)+'</span>';}).join('');
+      var q0=encodeURIComponent(s.k[0]||s.t);
+      var ip=IMG[s.i], ipHTML='';
+      if(ip){
+        ipHTML='<div class="ip'+(ip.noimg?' noimg':'')+'">'
+          +'<div class="ip-h"><span class="ipt">'+esc(ip.it)+'</span><span class="ip-ask">'+esc(ip.ask)+'</span></div>'
+          +'<div class="ip-k">'+(ip.ik||[]).map(function(k){
+              return '<span class="ik" data-ik="'+esc(k)+'" title="点击复制，粘到图库里搜">'+esc(k)+'</span>';
+            }).join('')+'</div>'
+          +'<div class="ip-s">'+(ip.src||[]).map(function(x){
+              return '<a class="is" target="_blank" rel="noopener" href="'+esc(x.u)+'" title="在 '+esc(x.n)+' 站内检索">'+esc(x.n)+' ↗</a>';
+            }).join('')
+          +'<span class="ip-fn" data-fn="'+esc(ip.fn)+'" title="点一下复制文件名；图下载后按这个名字存进 media 目录">'+esc(ip.fn)+'</span></div>'
+          +(ip.no?'<div class="ip-no">⚠ '+esc(ip.no)+'</div>':'')
+          +'</div>';
+      }
+      html+='<article class="row" data-i="'+s.i+'" data-ch="'+s.ch+'" data-p="'+s.p+'" data-t="'+esc(s.t.toLowerCase())+'" data-s="'+esc(s.s)+'" data-k="'+esc(s.k.join(' '))+'">'
+        +'<div class="rh"><span class="num">K'+pad(s.i+1)+'</span>'
+        +'<span class="pri '+s.p.toLowerCase()+'">'+s.p+'</span>'
+        +(s.h?'<span class="hit">真题命中 '+s.h+' 次</span>':'<span class="hit">暂无真题</span>')
+        +'<span class="dot"></span></div>'
+        +'<div class="rt">'+esc(s.t)+'</div>'
+        +'<p class="sum">'+esc(s.s)+'</p>'
+        +'<details class="more"><summary>▸ 看完整讲解（教材口径）</summary><p>'+esc((KP[s.i]&&KP[s.i].speak)||'')+'</p></details>'
+        +'<div class="find"><span class="lab">检索</span>'+kws
+          +'<a class="sbtn" target="_blank" rel="noopener" href="https://search.bilibili.com/all?keyword='+q0+'">B站</a>'
+          +'<a class="sbtn" target="_blank" rel="noopener" href="https://search.cctv.com/search.php?qtext='+q0+'">央视网</a>'
+          +'<a class="sbtn" target="_blank" rel="noopener" href="https://image.baidu.com/search/index?tn=baiduimage&word='+q0+'">图片</a>'
+          +'<a class="sbtn" target="_blank" rel="noopener" href="https://baike.baidu.com/search/word?word='+q0+'">百科</a>'
+          +'<span class="form">建议：'+esc(s.f)+'</span></div>'
+        + ipHTML
+        +'<div class="take">'
+          +'<div class="fld"><label>🎬 视频 <span class="cnt"></span></label><textarea data-f="v" rows="1" placeholder="每行一条：标题 | 链接 | 备注（只有链接也可以）"></textarea></div>'
+          +'<div class="fld"><label>📜 图片 / 史料 <span class="cnt"></span></label><textarea data-f="d" rows="1" placeholder="每行一条：图说 | media/k038.jpg 或图片地址 | 来源"></textarea></div>'
+          +'<div class="fld wide"><label>📝 备注（可选）</label><textarea data-f="n" rows="1" placeholder="如：第 3—5 分钟讲导火索；口径与教材 P42 一致"></textarea></div>'
+        +'</div></article>';
+    });
+    html+='</section>';
+  });
+  listEl.innerHTML=html;
+
+  function pad(n){return n<10?'00'+n:(n<100?'0'+n:''+n);}
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  /* ---------------- 回填已存 ---------------- */
+  var rows=[].slice.call(listEl.querySelectorAll('.row'));
+  rows.forEach(function(row){
+    var s=SEED[+row.dataset.i]; if(!s) return;
+    var rec=DB[s.t]||{};
+    var tv=row.querySelector('[data-f="v"]'), td=row.querySelector('[data-f="d"]'), tn=row.querySelector('[data-f="n"]');
+    if(rec.v&&rec.v.length) tv.value=linesFrom(rec.v);
+    if(rec.d&&rec.d.length) td.value=linesFrom(rec.d);
+    if(rec.note) tn.value=rec.note;
+    paint(row);
+  });
+
+  /* ---------------- 输入保存 ---------------- */
+  function paint(row){
+    var s=SEED[+row.dataset.i];
+    var v=parseLines(row.querySelector('[data-f="v"]').value);
+    var d=parseLines(row.querySelector('[data-f="d"]').value);
+    var n=row.querySelector('[data-f="n"]').value.trim();
+    var ok=(v.length||d.length||n);
+    row.classList.toggle('done',!!ok);
+    row.querySelector('[data-f="v"]').classList.toggle('filled',v.length>0);
+    row.querySelector('[data-f="d"]').classList.toggle('filled',d.length>0);
+    var cv=row.querySelectorAll('.take .cnt')[0], cd=row.querySelectorAll('.take .cnt')[1];
+    if(cv) cv.textContent=v.length?('已识别 '+v.length+' 条'):'';
+    if(cd) cd.textContent=d.length?('已识别 '+d.length+' 条'):'';
+    if(ok){ DB[s.t]={v:v,d:d,note:n}; } else { delete DB[s.t]; }
+    save(); recount();
+  }
+  listEl.addEventListener('input',function(e){
+    var ta=e.target.closest('textarea'); if(!ta) return;
+    var row=ta.closest('.row'); paint(row);
+    ta.style.height='auto'; ta.style.height=Math.max(34,ta.scrollHeight)+'px';
+  });
+  listEl.addEventListener('click',function(e){
+    var t=e.target.closest('.kw, .ik, .ip-fn');
+    if(t){
+      var v=t.dataset.kw||t.dataset.ik||t.dataset.fn; if(!v) return;
+      copy(v);
+      if(t.classList.contains('ip-fn')){
+        var o=t.textContent; t.textContent='已复制 ✓';
+        setTimeout(function(){ t.textContent=o; },1000);
+      } else {
+        var c=t.style.color; t.style.color='#35c08a';
+        setTimeout(function(){ t.style.color=c; },800);
+      }
+      return;
+    }
+  });
+
+  function copy(t){
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).catch(function(){fallbackCopy(t);}); }
+    else fallbackCopy(t);
+  }
+  function fallbackCopy(t){
+    var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta);
+  }
+
+  /* ---------------- 进度 ---------------- */
+  function recount(){
+    var d=0, dp={P1:0,P2:0,P3:0};
+    SEED.forEach(function(s){ if(DB[s.t]){ d++; dp[s.p]++; } });
+    doneAll=d;
+    document.getElementById('pDone').textContent=d;
+    document.getElementById('pAll').textContent=SEED.length;
+    document.getElementById('pBarI').style.width=(d/SEED.length*100).toFixed(1)+'%';
+    // 章节 / 优先级 上的计数
+    var chD={}, chA={};
+    SEED.forEach(function(s){ chA[s.ch]=(chA[s.ch]||0)+1; if(DB[s.t]) chD[s.ch]=(chD[s.ch]||0)+1; });
+    document.querySelectorAll('#fCh .chip').forEach(function(c){
+      var k=c.dataset.ch; if(k==='all') return;
+      var n=c.querySelector('.n'); if(n) n.textContent=(chD[k]||0)+'/'+(chA[k]||0);
+    });
+    var pn=document.querySelectorAll('#fPri .chip');
+    pn.forEach(function(c){ var k=c.dataset.p; var n=c.querySelector('.n');
+      if(k==='all'){ if(n) n.textContent=d+'/'+SEED.length; }
+      else if(n) n.textContent=dp[k]+'/'+counts[k]; });
+  }
+
+  /* ---------------- 筛选 ---------------- */
+  var F={ch:'all',p:'all',st:'all',q:''};
+  var fCh=document.getElementById('fCh'), fPri=document.getElementById('fPri'), fSt=document.getElementById('fSt');
+  fCh.insertAdjacentHTML('beforeend','<button class="chip on" data-ch="all">全部</button>'
+    + ORDER.map(function(ch){ return '<button class="chip" data-ch="'+ch+'">'+esc((CHM[ch]&&CHM[ch].label)||ch)+'<span class="n"></span></button>'; }).join(''));
+  fPri.innerHTML='<span class="lab">优先级</span>'
+    +'<button class="chip on" data-p="all">全部<span class="n"></span></button>'
+    +'<button class="chip p1" data-p="P1">P1 高频核心<span class="n"></span></button>'
+    +'<button class="chip" data-p="P2">P2 常考<span class="n"></span></button>'
+    +'<button class="chip" data-p="P3">P3 了解<span class="n"></span></button>';
+  fSt.innerHTML='<span class="lab">状态</span>'
+    +'<button class="chip on" data-st="all">全部</button>'
+    +'<button class="chip" data-st="undo">未采集</button>'
+    +'<button class="chip" data-st="done">已采集</button>';
+
+  function apply(){
+    var q=F.q.trim().toLowerCase();
+    rows.forEach(function(row){
+      var ok=true;
+      if(F.ch!=='all' && row.dataset.ch!==F.ch) ok=false;
+      if(ok && F.p!=='all' && row.dataset.p!==F.p) ok=false;
+      if(ok && F.st==='done' && !row.classList.contains('done')) ok=false;
+      if(ok && F.st==='undo' && row.classList.contains('done')) ok=false;
+      if(ok && q){
+        var hay=row.dataset.t+' '+row.dataset.s+' '+row.dataset.k;
+        if(hay.indexOf(q)<0) ok=false;
+      }
+      row.classList.toggle('hide',!ok);
+      if(ok) row.style.display='';
+    });
+    // 分组隐藏
+    document.querySelectorAll('.grp').forEach(function(g){
+      var any=g.querySelector('.row:not(.hide)');
+      g.style.display=any?'':'none';
+    });
+    var visible=listEl.querySelectorAll('.row:not(.hide)').length;
+    var e=document.getElementById('noRes');
+    if(!visible && !e){ listEl.insertAdjacentHTML('beforeend','<div class="empty" id="noRes">没有符合条件的知识点</div>'); }
+    if(visible && e) e.remove();
+  }
+  function bindChips(wrap,attr,key){
+    wrap.addEventListener('click',function(e){
+      var c=e.target.closest('.chip'); if(!c) return;
+      wrap.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
+      c.classList.add('on'); F[key]=c.dataset[attr]; apply();
+    });
+  }
+  bindChips(fCh,'ch','ch'); bindChips(fPri,'p','p'); bindChips(fSt,'st','st');
+  document.getElementById('q').addEventListener('input',function(e){ F.q=e.target.value; apply(); });
+
+  /* ---------------- 导出 ---------------- */
+  function mediaObj(){
+    var out={}, n=0;
+    Object.keys(DB).forEach(function(k){
+      var r=DB[k]; if(!r) return;
+      if((r.v&&r.v.length)||(r.d&&r.d.length)||r.note){ out[k]={v:r.v||[],d:r.d||[],note:r.note||''}; n++; }
+    });
+    return {obj:out,n:n};
+  }
+  function mediaJS(){
+    var m=mediaObj();
+    return '/* 知识点延伸媒体 · 由「知识点采集台」导出\n'
+      +' * 用法：与 data.js 放在同一目录，课件会自动加载并显示在知识点卡片里。\n'
+      +' * 字段：v=视频列表 d=图片/史料列表，每条 {t:标题,u:链接或图片路径,n:备注}\n'
+      +' * 图片：u 写 media/k025.jpg 这种相对路径（图存到项目的 media 目录），卡片会渲染成图；\n'
+      +' * 生成时间：'+new Date().toLocaleString('zh-CN')+' · 共 '+m.n+' 个知识点有内容\n'
+      +' */\nwindow.KP_MEDIA='+JSON.stringify(m.obj,null,1)+';\n';
+  }
+  document.getElementById('btnExport').onclick=function(){
+    var blob=new Blob([mediaJS()],{type:'application/javascript;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='media.js';
+    document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1000);
+  };
+  document.getElementById('btnCopy').onclick=function(){
+    copy(mediaJS()); this.textContent='已复制 ✓'; var b=this; setTimeout(function(){b.textContent='复制 JSON';},1400);
+  };
+
+  /* ---------------- 卡片预览 ---------------- */
+  var modal=document.getElementById('modal'), mbox=document.getElementById('mbox');
+  document.getElementById('btnPreview').onclick=function(){
+    // 预览：优先当前筛选下第一条已采集；否则第一条可见
+    var target=null;
+    rows.some(function(r){ if(!r.classList.contains('hide')&&r.classList.contains('done')){ target=r; return true; } });
+    if(!target) rows.some(function(r){ if(!r.classList.contains('hide')){ target=r; return true; } });
+    if(!target){ return; }
+    var s=SEED[+target.dataset.i], rec=DB[s.t]||{v:[],d:[],note:''};
+    var meta=CHM[s.ch]||{};
+    var h='<h3>'+esc(s.t)+'</h3><div class="sub">'+esc(meta.title||'')+'</div>';
+    h+='<div class="msec"><div class="mlbl">📖 考点讲解</div><div class="mtxt">'+esc(s.s)+'</div></div>';
+    if(rec.v&&rec.v.length){
+      h+='<div class="msec"><div class="mlbl">🎬 影像 · '+rec.v.length+' 条</div><div class="vlist">'
+        +rec.v.map(function(x){return '<div class="vitem"><span class="ic">▶</span><span>'+esc(x.t||x.u)+'<small>'+esc(x.n||'点击在浏览器打开')+'</small></span></div>';}).join('')
+        +'</div></div>';
+    }
+    if(rec.d&&rec.d.length){
+      h+='<div class="msec"><div class="mlbl">📜 图片 · 史料 '+rec.d.length+' 条</div><div class="vlist">'
+        +rec.d.map(function(x){
+            var isImg=/\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$/i.test(x.u||'') || /^data:image\//.test(x.u||'');
+            if(isImg){
+              return '<figure class="dfig"><img src="'+esc(x.u)+'" alt="'+esc(x.t||'')+'" loading="lazy"'
+                +' onerror="this.parentNode.classList.add(\'bad\')">'
+                +'<figcaption>'+esc(x.t||'')+(x.n?'<small>'+esc(x.n)+'</small>':'')+'</figcaption></figure>';
+            }
+            return '<div class="ditem"><span class="ic">▤</span><span>'+esc(x.t||x.u)
+              +'<small style="display:block;color:#8ea4cf;font-size:10.5px;margin-top:2px;">'+esc(x.n||'')+'</small></span></div>';
+          }).join('')
+        +'</div></div>';
+    }
+    if(rec.note) h+='<div class="msec"><div class="mlbl">📝 备注</div><div class="mtxt">'+esc(rec.note)+'</div></div>';
+    if(!(rec.v&&rec.v.length)&&!(rec.d&&rec.d.length)) h+='<div class="mnote">这条还没采集，卡片里不会出现「影像 · 史料」区块（保持干净，不留空框）。</div>';
+    h+='<button class="mclose" id="mclose">关 闭</button>';
+    mbox.innerHTML=h; modal.classList.add('open');
+    document.getElementById('mclose').onclick=function(){ modal.classList.remove('open'); };
+  };
+  modal.addEventListener('click',function(e){ if(e.target===modal) modal.classList.remove('open'); });
+
+  apply(); recount();
+})();
+</script>
+</body>
+</html>

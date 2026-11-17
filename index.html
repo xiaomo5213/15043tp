@@ -1,0 +1,2772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>中国近现代史纲要 · 3D 星图与真题练习</title>
+<style>
+  :root{
+    --red:#e23b3b; --gold:#e9b949; --blue:#5b8cff; --purple:#9a6bff;
+    --ink:#f4f1e8; --bg0:#05081a; --panel:rgba(14,19,44,0.97);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;
+    background:
+      radial-gradient(1100px 760px at 18% 22%, rgba(122,64,210,0.40), transparent 60%),
+      radial-gradient(950px 720px at 82% 28%, rgba(46,120,225,0.34), transparent 62%),
+      radial-gradient(880px 880px at 62% 82%, rgba(225,60,150,0.24), transparent 60%),
+      radial-gradient(1000px 700px at 34% 78%, rgba(34,190,175,0.20), transparent 60%),
+      radial-gradient(720px 620px at 50% 48%, rgba(255,180,90,0.16), transparent 60%),
+      var(--bg0);
+    font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;color:var(--ink);
+    -webkit-text-size-adjust:100%;}
+  body{user-select:none;}
+  #app,#stage{position:fixed;inset:0;}
+  canvas{display:block;touch-action:none;}
+
+  /* 星空（WebGL 失败时仍可用） */
+  .star{position:absolute;border-radius:50%;background:#fff;opacity:.7;animation:tw 3s infinite ease-in-out;}
+  @keyframes tw{0%,100%{opacity:.25}50%{opacity:.9}}
+
+  /* 顶部导航 */
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:7px;
+    padding:9px 12px;background:linear-gradient(180deg,rgba(5,8,26,0.94),rgba(5,8,26,0));
+    overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;}
+  #topbar::-webkit-scrollbar{display:none;}
+  #topbar .brand{font-weight:700;font-size:15px;letter-spacing:.5px;margin-right:4px;flex:none;
+    background:linear-gradient(90deg,var(--gold),var(--red));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .navbtn{flex:none;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;
+    padding:7px 12px;border-radius:20px;font-size:13px;cursor:pointer;transition:.2s;}
+  .navbtn:hover{background:rgba(255,255,255,0.16);}
+  .navbtn.active{border-color:var(--gold);box-shadow:0 0 12px rgba(233,185,73,0.5);}
+  .navbtn .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .navbtn.layout{background:linear-gradient(90deg,#16324f,#2a5b8c);border-color:var(--blue);}
+
+  /* 音色选择 */
+  #voiceWrap{flex:none;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:3px 8px;}
+  #voiceWrap label{font-size:12px;color:#c9cbe0;}
+  #voiceSelect{background:transparent;border:none;color:#fff;font-size:12px;outline:none;max-width:120px;}
+  #voiceSelect option{color:#000;}
+
+  /* 悬停提示 */
+  #tooltip{position:fixed;z-index:25;pointer-events:none;padding:6px 11px;border-radius:8px;
+    background:rgba(0,0,0,0.8);border:1px solid rgba(255,255,255,0.25);font-size:13px;
+    transform:translate(-50%,-130%);display:none;white-space:nowrap;}
+
+  /* 关系标签（拓扑连线） */
+  .edge-label{position:fixed;z-index:15;pointer-events:none;transform:translate(-50%,-50%);
+    font-size:11px;padding:2px 7px;border-radius:10px;background:rgba(8,12,32,0.72);
+    border:1px solid rgba(120,150,255,0.35);color:#cdd6ff;white-space:nowrap;display:none;}
+  .edge-label.hot{background:rgba(233,185,73,0.9);color:#1a1f44;border-color:#ffd86b;font-weight:600;}
+
+  /* 弹窗（替代右侧面板） */
+  #panel{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:16px;}
+  #panel.open{display:flex;}
+  .pbackdrop{position:absolute;inset:0;background:rgba(3,6,18,0.66);backdrop-filter:blur(2px);}
+  .pmodal{position:relative;width:min(480px,94vw);max-height:86vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid rgba(255,255,255,0.16);border-radius:16px;overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,0.65), 0 0 36px rgba(91,140,255,0.22);animation:pop .28s cubic-bezier(.2,.9,.2,1);}
+  @keyframes pop{from{transform:scale(.92) translateY(14px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+  .phead{padding:18px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.12);position:relative;}
+  .ptag{display:inline-block;font-size:12px;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+  .pmodal h2{margin:0;font-size:21px;line-height:1.3;user-select:text;}
+  .sub{margin-top:6px;font-size:13px;color:#c9cbe0;}
+  .pclose{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;
+    border:1px solid rgba(255,255,255,0.25);background:transparent;color:#fff;font-size:18px;cursor:pointer;}
+  .pbody{padding:16px 20px 24px;overflow-y:auto;flex:1;font-size:14.5px;line-height:1.85;user-select:text;}
+  .pbody h3{font-size:16px;margin:16px 0 8px;color:var(--gold);border-left:3px solid var(--gold);padding-left:9px;}
+  .pbody p{margin:9px 0;color:#e7e8f2;}
+  .pbody .key{color:#ffd86b;font-weight:600;}
+  .pbody ul{margin:8px 0;padding-left:20px;}
+  .pbody li{margin:6px 0;}
+  .pbody .quote{background:rgba(255,255,255,0.06);border-left:3px solid var(--blue);
+    padding:10px 12px;border-radius:6px;margin:12px 0;color:#d6d9ee;font-size:13.5px;}
+  .speak-btn{display:inline-flex;align-items:center;gap:6px;margin:6px 8px 2px 0;border:1px solid var(--gold);
+    color:var(--gold);background:rgba(233,185,73,0.08);padding:9px 16px;border-radius:22px;cursor:pointer;font-size:14px;}
+  .speak-btn:hover{background:var(--gold);color:#1a1f44;}
+  .speak-btn.loading{opacity:.6;pointer-events:none;}
+  .speak-btn.speaking{border-color:var(--red);color:var(--red);background:rgba(226,59,59,0.1);}
+  .speak-btn.tour-btn{border-color:var(--blue);color:#a8c1ff;background:rgba(91,140,255,0.10);}
+  .speak-btn.tour-btn:hover{background:var(--blue);color:#fff;}
+  body.no3d .speak-btn.tour-btn{display:none;}  /* 图文降级模式没有星空可看 */
+  .jump{margin-top:16px;display:inline-block;border:1px solid var(--blue);color:var(--blue);
+    padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;}
+  .jump:hover{background:var(--blue);color:#fff;}
+
+  /* 知识点颜色标注 */
+  .ktag-color{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+
+  /* 弹窗内：关联拓扑（可点击跳转，跳转后星图随之点亮） */
+  .krel{margin-top:16px;border-top:1px dashed rgba(255,255,255,0.18);padding-top:12px;}
+  .krel h3{color:var(--gold);}
+  .krel-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+  .krel-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.05);color:#eef0ff;border-radius:11px;padding:7px 11px;font-size:13px;
+    cursor:pointer;transition:.16s;text-align:left;font-family:inherit;}
+  .krel-chip:hover{background:rgba(233,185,73,0.14);border-color:var(--gold);transform:translateY(-1px);}
+  .krel-chip:active{transform:translateY(0);}
+  .krel-chip .kc-dot{flex:none;width:8px;height:8px;border-radius:50%;box-shadow:0 0 7px currentColor;}
+  .krel-chip .kc-t{white-space:normal;line-height:1.35;}
+  .krel-chip em{font-style:normal;font-size:11px;color:#a9b0d6;border-left:1px solid rgba(255,255,255,0.2);
+    padding-left:7px;white-space:nowrap;}
+  .krel-tip{margin-top:9px;font-size:12px;color:#9aa0c8;line-height:1.6;}
+  .navbtn .smc{font-size:11px;font-weight:400;opacity:.9;margin-left:4px;}
+  .navbtn.starmap{background:linear-gradient(90deg,rgba(91,140,255,0.30),rgba(154,107,255,0.30));border-color:rgba(140,170,255,0.55);}
+
+  /* 填空：点击显示答案 */
+  .kfillReveal{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px 14px;border-radius:10px;
+    border:2px dashed rgba(255,255,255,0.35);background:rgba(255,255,255,0.05);color:#cdd6ff;font-size:14px;cursor:pointer;
+    text-align:center;transition:.18s;-webkit-user-select:none;user-select:none;}
+  .kfillReveal:hover{border-color:var(--blue);background:rgba(91,140,255,0.12);}
+  .kfillReveal.show{border-style:solid;border-color:#4cd978;background:rgba(76,217,120,0.14);color:#eafff0;font-weight:600;}
+  .kfillReveal .ans{color:#ffd86b;}
+
+  /* 课程目录（整体结构）—— 改为不阻塞星空的侧边抽屉 */
+  #toc{position:fixed;inset:0;z-index:45;display:none;pointer-events:none;} /* 容器不拦截事件，星空透传可缩放/旋转 */
+  #toc.open{display:block;}
+  .toc-backdrop{display:none;} /* 不再用全屏遮罩挡住星空 */
+  .toc-modal{position:absolute;top:0;left:0;height:100%;width:min(380px,90vw);display:flex;flex-direction:column;
+    background:var(--panel);border-right:1px solid rgba(255,255,255,0.14);box-shadow:0 0 50px rgba(0,0,0,0.6);
+    pointer-events:auto; /* 仅抽屉本体可交互（滚动/点选/关闭） */
+    animation:slideL .28s cubic-bezier(.2,.9,.2,1);}
+  @keyframes slideL{from{transform:translateX(-100%);}to{transform:translateX(0);}}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .toc-head{padding:16px 18px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.12);}
+  .toc-close{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:transparent;color:#fff;font-size:18px;cursor:pointer;}
+  .toc-body{flex:1;overflow-y:auto;padding:8px 14px 24px;}
+  .toc-ch{margin:10px 0;border-radius:12px;padding:6px 10px;background:rgba(255,255,255,0.04);}
+  .toc-ch-h{font-size:15px;font-weight:700;color:var(--c);cursor:pointer;padding:8px 4px;display:flex;justify-content:space-between;align-items:center;}
+  .toc-ch-h .cnt{font-size:12px;color:#aeb2d6;font-weight:400;}
+  .toc-item{display:flex;align-items:center;gap:10px;padding:9px 10px;margin:4px 0;border-radius:9px;cursor:pointer;font-size:14px;transition:.15s;}
+  .toc-item:hover{background:rgba(255,255,255,0.07);}
+  .toc-item .dot{flex:none;width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor;}
+  .toc-item .t{color:#eef0ff;}
+  /* 一级目录：编 */
+  .toc-part{margin:14px 0 6px;}
+  .toc-part-h{font-size:13px;font-weight:700;letter-spacing:.5px;color:var(--c);
+    padding:7px 10px;margin-bottom:6px;border-radius:10px;}
+  .toc-ch{margin:8px 0 8px 6px;border-radius:12px;padding:6px 10px;background:rgba(255,255,255,0.04);}
+  /* 目录知识点：可折叠，默认折叠 */
+  .toc-ch-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .toc-ch-h .chev{display:inline-block;transition:transform .2s;font-size:11px;margin-left:6px;}
+  .toc-ch.collapsed .toc-ch-h .chev{transform:rotate(-90deg);}
+  .toc-list{overflow:hidden;}
+  .toc-ch.collapsed .toc-list{display:none;}
+  .toc-focus{margin-left:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:#dfe3ff;
+    border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;flex:none;}
+  .toc-focus:hover{background:rgba(255,255,255,0.14);}
+  /* 弹窗内 上一个/下一个 导航 */
+  .pnav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;
+    border-top:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);flex:none;}
+  .pnav button{flex:1;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);color:#eef0ff;
+    border-radius:10px;padding:9px 6px;font-size:13.5px;cursor:pointer;transition:.15s;}
+  .pnav button:hover{background:rgba(255,255,255,0.12);}
+  .pnav button:active{transform:scale(.97);}
+  .pnav .ord{font-size:12px;color:#aeb2d6;flex:none;padding:0 4px;white-space:nowrap;}
+
+  /* 课程大纲（框架轮廓） */
+  #outline{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;padding:16px;
+    background:rgba(3,6,18,0.55);backdrop-filter:blur(3px);}
+  #outline.open{display:flex;}
+  .outline-card{width:100%;max-width:720px;box-sizing:border-box;max-height:86vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid rgba(255,255,255,0.16);border-radius:16px;overflow:hidden;
+    box-shadow:0 0 50px rgba(0,0,0,0.6);animation:popO .25s cubic-bezier(.2,.9,.2,1);}
+  @keyframes popO{from{transform:scale(.94);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .outline-head{padding:16px 18px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.12);}
+  .outline-body{flex:1;overflow-y:auto;padding:14px 18px 24px;}
+  .ol-top{font-size:13.5px;line-height:1.8;color:#c7cbe8;background:rgba(255,255,255,0.04);
+    border-radius:10px;padding:10px 14px;margin-bottom:14px;}
+  .ol-ch{margin:12px 0;border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.03);}
+  .ol-ch-h{font-size:15px;font-weight:700;color:var(--c);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .ol-ch-h .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .ol-sub{font-size:12px;color:#aeb2d6;font-weight:400;margin-left:2px;}
+  .ol-sec{margin-top:8px;font-size:13.5px;line-height:1.75;color:#e7e9ff;}
+  .ol-sec b{color:#fff;}
+  .ol-sec p{margin:4px 0 0;}
+  .ol-ul{margin:4px 0 0;padding-left:20px;}
+  .ol-ul li{margin:2px 0;}
+  .ol-how{background:rgba(233,185,73,0.08);border-radius:10px;padding:8px 12px;margin-top:10px;}
+  /* 大纲考核要求：四级能力层次 */
+  .ol-bar{display:flex;height:8px;border-radius:6px;overflow:hidden;margin:8px 0 4px;background:rgba(255,255,255,0.08);}
+  .ol-bar i{display:block;height:100%;}
+  .ol-legend{font-size:11.5px;color:#aeb2d6;line-height:1.6;}
+  .ol-exam{background:rgba(255,255,255,0.035);border-radius:10px;padding:8px 10px;margin:8px 0;}
+  .ol-exam-h{font-size:13px;font-weight:700;color:#dfe3ff;margin-bottom:4px;}
+  .ol-req{font-size:13px;line-height:1.72;color:#dfe2f7;margin:3px 0;padding-left:2px;}
+  .ol-lv{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;margin-right:7px;
+    vertical-align:1px;white-space:nowrap;}
+  .ol-lv.l1{background:rgba(91,140,255,0.20);color:#a8c1ff;}
+  .ol-lv.l2{background:rgba(76,217,120,0.16);color:#8fe6ac;}
+  .ol-lv.l3{background:rgba(233,185,73,0.18);color:#f0cf84;}
+  .ol-lv.l4{background:rgba(226,59,59,0.18);color:#ff9a9a;}
+  details.ol-kps{margin-top:8px;}
+  details.ol-kps summary{cursor:pointer;font-size:12.5px;color:#aeb2d6;list-style:none;user-select:none;}
+  details.ol-kps summary::-webkit-details-marker{display:none;}
+  details.ol-kps summary:before{content:"▸ ";color:#8db0ff;}
+  details.ol-kps[open] summary:before{content:"▾ ";}
+  details.ol-kps ul{max-height:230px;overflow:auto;margin-top:4px;padding-right:4px;}
+  /* 大纲内嵌的二级章节（编下的各章） */
+  .ol-subch{margin:10px 0 10px 6px;border-radius:12px;padding:8px 10px;background:rgba(255,255,255,0.03);}
+
+  /* 知识点动画插图 */
+  .animbox{width:100%;max-width:280px;margin:2px auto 16px;display:block;
+    background:rgba(91,140,255,0.06);border:1px solid rgba(91,140,255,0.22);
+    border-radius:12px;padding:8px;overflow:hidden;}
+  .anim-svg{width:100%;height:auto;display:block;}
+  /* 真实历史图片 */
+  .histimg{width:100%;max-width:320px;margin:2px auto 14px;}
+  .histimg img{width:100%;height:auto;display:block;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+    background:#0c1030;box-shadow:0 6px 22px rgba(0,0,0,0.45);}
+  .histimg .imgcap{font-size:11px;color:#9aa0c8;text-align:center;margin-top:6px;line-height:1.5;}
+
+  /* 每个知识点内的自测题 */
+  .kquiz{margin-top:18px;border-top:1px dashed rgba(255,255,255,0.18);padding-top:14px;}
+  .kquiz h3{color:var(--blue);border-left-color:var(--blue);}
+  .kq{font-size:14.5px;font-weight:600;margin-bottom:10px;line-height:1.55;color:#eef0ff;}
+  .kopt{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:9px;margin:6px 0;
+    border:1px solid transparent;cursor:pointer;font-size:14px;transition:.15s;}
+  .kopt:hover{background:rgba(255,255,255,0.05);}
+  .kopt input{margin-top:3px;flex:none;}
+  .kopt.correct{background:rgba(76,217,120,0.16);border-color:#4cd978;}
+  .kopt.wrong{background:rgba(226,59,59,0.16);border-color:#e23b3b;}
+  .kfill{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap;}
+  .kfill input{flex:1;min-width:120px;padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.06);color:#fff;font-size:14px;outline:none;-webkit-user-select:text;user-select:text;}
+  .kfill input:focus{border-color:var(--blue);}
+  .kfill.correct input{border-color:#4cd978;background:rgba(76,217,120,0.12);}
+  .kfill.wrong input{border-color:#e23b3b;background:rgba(226,59,59,0.12);}
+  .kcheck{margin-top:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;color:#1a1f44;padding:9px 22px;border-radius:22px;
+    background:linear-gradient(90deg,var(--blue),#8db0ff);}
+  .kexp{font-size:13px;color:#c9cbe0;margin-top:8px;padding:8px 10px;background:rgba(91,140,255,0.1);
+    border-radius:8px;display:none;}
+  .kexp.show{display:block;}
+
+  #hint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:20;font-size:12px;
+    color:#aeb2d6;background:rgba(5,8,26,0.6);padding:6px 14px;border-radius:18px;
+    border:1px solid rgba(255,255,255,0.1);text-align:center;max-width:94vw;}
+
+  /* 我的星图：已点亮进度（🌠 星图总览时出现） */
+  #smPanel{position:fixed;left:50%;bottom:52px;transform:translate(-50%,12px);z-index:22;display:none;
+    width:min(320px,88vw);padding:12px 14px;border-radius:14px;
+    background:rgba(10,15,36,0.86);border:1px solid rgba(140,170,255,0.35);
+    box-shadow:0 12px 34px rgba(0,0,0,0.5),0 0 26px rgba(91,140,255,0.18);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);opacity:0;transition:opacity .25s,transform .25s;}
+  #smPanel.open{display:block;opacity:1;transform:translate(-50%,0);}
+  .smp-h{font-size:13px;font-weight:700;color:#e9edff;letter-spacing:.5px;}
+  .smp-bar{height:7px;border-radius:6px;background:rgba(255,255,255,0.10);overflow:hidden;margin:9px 0 7px;}
+  .smp-bar i{display:block;height:100%;width:0;border-radius:6px;
+    background:linear-gradient(90deg,#5b8cff,#e9b949);transition:width .5s ease;}
+  .smp-n{font-size:12px;color:#a9b0d6;}
+  .smp-a{margin-top:9px;display:flex;justify-content:flex-end;}
+  .smp-a button{border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);color:#cfd5ee;
+    border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;font-family:inherit;transition:.15s;}
+  .smp-a button:hover{border-color:var(--red);color:#ffb3b3;}
+  .smp-a button.ok{border-color:var(--red);background:rgba(226,59,59,0.18);color:#ffd2d2;}
+
+  /* 开场引导 */
+  #intro{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 35%,#16204a,#05081a 70%);text-align:center;transition:opacity .6s;padding:20px;}
+  #intro h1{font-size:30px;margin:0 0 6px;letter-spacing:2px;
+    background:linear-gradient(90deg,var(--gold),var(--red));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  #intro .sub2{font-size:14px;color:#c9cbe0;margin-bottom:22px;}
+  #intro .tip{font-size:13px;color:#9aa0c8;max-width:540px;line-height:1.9;margin-bottom:24px;}
+  #intro .enter{border:none;cursor:pointer;font-size:16px;font-weight:600;color:#1a1f44;
+    padding:13px 40px;border-radius:30px;background:linear-gradient(90deg,var(--gold),#ffd86b);
+    box-shadow:0 6px 24px rgba(233,185,73,0.4);}
+  #err{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:#05081a;color:#ff9b9b;font-size:14px;text-align:center;padding:30px;line-height:1.8;}
+
+  /* 降级 HTML 卡片栅格（CDN 不可用） */
+  #fallback{position:fixed;inset:0;z-index:5;overflow-y:auto;display:none;padding:70px 16px 40px;}
+  #fallback h2{font-size:18px;margin:18px 0 10px;}
+  #fallback .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  #fallback .fcard{border-radius:12px;padding:12px;background:rgba(255,255,255,0.05);border:2px solid var(--c);cursor:pointer;font-size:14px;font-weight:600;}
+  #fallback .fcard small{display:block;font-weight:400;color:#c9cbe0;font-size:12px;margin-top:4px;}
+  #fallback .kq{color:#eef0ff;}
+
+  /* 移动端：弹窗改底部抽屉 */
+  @media (max-width:760px){
+    #panel{align-items:flex-end;padding:0;}
+    .pmodal{width:100%;max-height:88vh;border-radius:18px 18px 0 0;}
+    #topbar .brand{display:none;}
+    body{font-size:15px;}
+    .edge-label{font-size:10px;}
+    #toc .toc-modal{width:100%;height:auto;max-height:62vh;top:auto;bottom:0;border-right:none;border-top:1px solid rgba(255,255,255,0.14);
+      border-radius:18px 18px 0 0;animation:slideU .28s cubic-bezier(.2,.9,.2,1);}
+    @keyframes slideU{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="topbar">
+  <span class="brand">中国近现代史纲要</span>
+  <button class="navbtn" id="btnPractice" style="background:linear-gradient(90deg,rgba(233,185,73,0.35),rgba(226,59,59,0.28));border-color:rgba(233,185,73,0.6)">📝 练习</button>
+  <button class="navbtn" id="btnTOC">📑 目录</button>
+  <button class="navbtn" id="btnOutline">🗂 大纲</button>
+  <button class="navbtn starmap" id="btnStarMap" title="点亮所有学过的知识点，看你的星图长到多大">🌠 星图<b class="smc" id="smCount">0/0</b></button>
+  <button class="navbtn" id="btnReset">重置/整理</button>
+  <span id="voiceWrap"><label>🔊</label>
+    <select id="voiceSelect" title="选择发音音色">
+      <option value="zh-CN-XiaoxiaoNeural">女声·自然</option>
+      <option value="zh-CN-XiaoyiNeural">女声·温柔</option>
+      <option value="zh-CN-YunxiNeural">男声·云希</option>
+      <option value="zh-CN-YunyangNeural">男声·新闻</option>
+      <option value="zh-CN-XiaohanNeural">女声·知性</option>
+    </select>
+  </span>
+</div>
+
+<div id="tooltip"></div>
+
+<!-- 弹窗（点击卡片/章节时居中显示） -->
+<div id="panel">
+  <div class="pbackdrop" id="panelBackdrop"></div>
+  <div class="pmodal" id="pmodal">
+    <div class="phead">
+      <button class="pclose" id="panelClose">×</button>
+      <span class="ptag" id="panelTag">知识点</span>
+      <h2 id="panelTitle">标题</h2>
+      <div class="sub" id="panelSub"></div>
+    </div>
+    <div class="pbody" id="panelBody"></div>
+    <div class="pnav" id="pnav" style="display:none">
+      <button id="kpPrev">◂ 上一个</button>
+      <span class="ord" id="kpOrder"></span>
+      <button id="kpNext">下一个 ▸</button>
+    </div>
+  </div>
+</div>
+
+<!-- 课程目录（整体结构） -->
+<div id="toc">
+  <div class="toc-backdrop" id="tocBackdrop"></div>
+  <div class="toc-modal" id="tocModal">
+    <div class="toc-head"><span>📑 课程目录 · 整体结构</span><button class="toc-close" id="tocClose">×</button></div>
+    <div class="toc-body" id="tocBody"></div>
+  </div>
+</div>
+
+<!-- 课程大纲（框架轮廓） -->
+<div id="outline">
+  <div class="outline-card">
+    <div class="outline-head"><span>🗂 课程大纲 · 按考试大纲组织</span><button class="toc-close" id="outlineClose">×</button></div>
+    <div class="outline-body" id="outlineBody"></div>
+  </div>
+</div>
+
+<div id="hint">✨ 纯星海：轻点星云任一处，浮出一个知识点，它的<b>关联拓扑</b>随之点亮 · 学过的知识点会一直微亮，越学星图越亮 · 📝 练习：历年真题整卷考试 / 逐题精练（含错题本·收藏·最近） · 🖱 拖动旋转 · 滚轮缩放 · 系统学习请用 📑 目录</div>
+
+<div id="smPanel">
+  <div class="smp-h">🌠 我的知识星图</div>
+  <div class="smp-bar"><i id="smBar"></i></div>
+  <div class="smp-n" id="smNum">已点亮 0 / 0 个知识点</div>
+  <div class="smp-a"><button type="button" id="smClear">清空点亮记录</button></div>
+</div>
+
+<div id="intro">
+  <h1>中国近现代史纲要</h1>
+  <div class="sub2">3D 星图 · 15043 历年真题练习</div>
+  <div class="tip">依据教材《中国近现代史纲要》与全国考委 2024 年修订的课程考试大纲编制，按<b>编—章—知识点</b>三级结构组织：导言总论，<b>上编</b>（1840—1919）含第一至三章，<b>中编</b>（1919—1949）含第四至七章，<b>下编</b>（1949— ）含第八至十章。<b><span id="kpCount">—</span> 个知识点</b>以<b>拓扑关系</b>彼此呼应在星云深处，随宇宙缓缓流转；<b>轻点星云任一处</b>，就会浮出一个知识点，<b>与它相连的拓扑会一起亮起</b>——学过的知识点留在星空中微微发光，<b>学得越多，亮起的星图越大</b>。<br/>
+  系统学习请点右上角 <b>📑 目录</b>：一眼看懂"编→章→知识点"的整体结构，点击目录中的知识点会弹出讲解窗口；窗口内含<b>自测题（选择或点击显示答案的填空）</b>与 🔊 发音，并列出<b>🔗 关联拓扑</b>可直接跳转。右上角 <b>🌠 星图</b> 用来总览自己点亮了多少知识点。<br/>
+  手机端：单指拖拽旋转视角，双指捏合缩放，轻点星云看知识点。</div>
+  <button class="enter" id="enterBtn">进入历史拓扑</button>
+</div>
+
+<div id="fallback"></div>
+<div id="err">⚠ 3D 资源（Three.js）加载失败，已自动切换为图文卡片模式。<br/>若需完整 3D 体验，请在可访问网络的浏览器中打开本页面。</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="data.js"></script>
+<script src="exam_data.js"></script>
+<script src="media.js" onerror="window.__mediaMissing=1"></script>
+<script>
+(function(){
+  /* 知识内容（partMeta / chapterMeta / knowledge / relationDefs / chapterDetail / clusterRaw）已拆分到 data.js —— 改内容只动 data.js，不动本文件样式与逻辑 */
+
+  /* ====================== 知识拓扑索引（面板「关联拓扑」与 3D 星图共用） ====================== */
+  const TITLE_IDX={}; knowledge.forEach((k,i)=>{ TITLE_IDX[k.title]=i; });
+  const REL_BY={};   // 标题 → [{t:相邻标题, label:关系说明}]
+  relationDefs.forEach(r=>{ const a=r[0],b=r[1],l=r[2];
+    if(TITLE_IDX[a]==null||TITLE_IDX[b]==null) return;
+    (REL_BY[a]=REL_BY[a]||[]).push({t:b,label:l});
+    (REL_BY[b]=REL_BY[b]||[]).push({t:a,label:l}); });
+
+  // 3D 场景就绪后接管（无 WebGL 的图文模式下保持 null，行为不变）
+  let topoLight=null, topoUnlight=null, topoFocus=null, topoTour=null;
+
+  /* ---------- 学习点亮记录（localStorage: xs15043:learned） ---------- */
+  const LEARN_KEY='xs15043:learned';
+  function learnRead(){ try{ const v=localStorage.getItem(LEARN_KEY); const a=v?JSON.parse(v):[];
+      return new Set(Array.isArray(a)?a:[]); }catch(e){ return new Set(); } }
+  function learnWrite(set){ try{ localStorage.setItem(LEARN_KEY, JSON.stringify(Array.from(set))); }catch(e){} }
+
+  // 面板内的「关联拓扑」小卡片：点一下就能跳到相邻知识点，星图也会跟着亮
+  function relChipsHTML(kp){
+    const rels=(REL_BY[kp.title]||[]);
+    if(!rels.length) return '<div class="krel"><h3>🔗 关联拓扑</h3>'+
+      '<div class="krel-tip">这个知识点暂时没有显式的关系连线；星空中会点亮同章最近的几个知识点作为参照。</div></div>';
+    let h='<div class="krel"><h3>🔗 关联拓扑 · '+rels.length+'</h3><div class="krel-list">';
+    rels.forEach(r=>{ const j=TITLE_IDX[r.t]; if(j==null) return; const t=knowledge[j];
+      const col=(chapterMeta[t.ch]||{}).color||'#8fb0ff';
+      h+='<button type="button" class="krel-chip" data-kp="'+j+'">'+
+           '<span class="kc-dot" style="background:'+col+';color:'+col+'"></span>'+
+           '<span class="kc-t">'+r.t+'</span><em>'+r.label+'</em></button>'; });
+    h+='</div><div class="krel-tip">这些节点与你正在看的这个知识点直接相连——点任意一个，星空中它的拓扑会重新点亮。</div></div>';
+    return h;
+  }
+  /* ====================== 知识点动画插图（自包含 SVG/SMIL） ====================== */
+  function gearTeeth(){ let t=''; for(let a=0;a<360;a+=45){ t+='<rect x="116" y="33" width="8" height="16" rx="2" fill="#ffd86b" transform="rotate('+a+' 120 75)"/>'; } return t; }
+  function animSVG(key){
+    switch(key){
+      case 'clock': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <circle cx="120" cy="75" r="46" fill="rgba(91,140,255,0.08)" stroke="#5b8cff" stroke-width="4"/>
+        <g><line x1="120" y1="75" x2="120" y2="42" stroke="#ffd86b" stroke-width="4" stroke-linecap="round"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 120 75" to="360 120 75" dur="8s" repeatCount="indefinite"/></g>
+        <g><line x1="120" y1="75" x2="150" y2="75" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 120 75" to="360 120 75" dur="40s" repeatCount="indefinite"/></g>
+        <circle cx="120" cy="75" r="5" fill="#e23b3b"/></svg>`;
+      case 'shield': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M120 25 L185 48 V92 Q185 120 120 135 Q55 120 55 92 V48 Z" fill="rgba(226,59,59,0.12)" stroke="#e23b3b" stroke-width="4"/>
+        <path d="M95 78 L114 98 L150 58" fill="none" stroke="#ffd86b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="120" stroke-dashoffset="120">
+          <animate attributeName="stroke-dashoffset" values="120;0;120" dur="3s" repeatCount="indefinite"/></path></svg>`;
+      case 'star': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <polygon points="120,29 131.8,58.8 163.8,60.8 139,81.2 147,112.2 120,95 93,112.2 101,81.2 76.3,60.8 108.2,58.8" fill="rgba(255,216,107,0.25)">
+          <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.5s" repeatCount="indefinite"/></polygon>
+        <polygon points="120,42 127,60 147,61 131,73 136,93 120,81 104,93 109,73 93,61 113,60" fill="#ffd86b"/></svg>`;
+      case 'road': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M120 122 L62 32" stroke="#5b8cff" stroke-width="6" fill="none"/>
+        <path d="M120 122 L120 32" stroke="#ffd86b" stroke-width="6" fill="none"/>
+        <path d="M120 122 L178 32" stroke="#e23b3b" stroke-width="6" fill="none"/>
+        <circle cx="120" cy="122" r="10" fill="#ffd86b"><animate attributeName="r" values="8;13;8" dur="1.4s" repeatCount="indefinite"/></circle>
+        <polygon points="120,18 112,34 128,34" fill="#fff"/></svg>`;
+      case 'map': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M58 40 H182 V112 H58 Z" fill="#232a55" stroke="#5b8cff" stroke-width="3"/>
+        <path d="M58 76 H182 M120 40 V112" stroke="#5b8cff" stroke-width="2" opacity="0.5"/>
+        <circle cx="92" cy="62" r="7" fill="#e23b3b"><animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/></circle>
+        <circle cx="150" cy="86" r="7" fill="#e23b3b"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.4s" repeatCount="indefinite"/></circle>
+        <circle cx="165" cy="58" r="7" fill="#e23b3b"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle></svg>`;
+      case 'target': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <circle cx="120" cy="75" r="50" fill="none" stroke="#5b8cff" stroke-width="4"/>
+        <circle cx="120" cy="75" r="32" fill="none" stroke="#ffd86b" stroke-width="4"/>
+        <circle cx="120" cy="75" r="14" fill="#e23b3b"><animate attributeName="r" values="10;17;10" dur="1.6s" repeatCount="indefinite"/></circle>
+        <line x1="120" y1="75" x2="120" y2="27" stroke="#fff" stroke-width="3"/>
+        <polygon points="120,20 113,34 127,34" fill="#fff"/></svg>`;
+      case 'mountain': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <polygon points="20,128 80,58 140,128" fill="#e23b3b" opacity="0.85"/>
+        <polygon points="90,128 150,42 210,128" fill="#ffd86b" opacity="0.85"/>
+        <polygon points="150,128 196,72 230,128" fill="#5b8cff" opacity="0.85"/>
+        <line x1="10" y1="128" x2="232" y2="128" stroke="#cdd6ff" stroke-width="3"/>
+        <polygon points="120,18 112,34 128,34" fill="#fff"><animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/></polygon></svg>`;
+      case 'broken': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M40 75 q22 -26 44 0 q22 26 44 0" fill="none" stroke="#9aa0c8" stroke-width="9" stroke-linecap="round"/>
+        <path d="M200 75 q-22 -26 -44 0 q-22 26 -44 0" fill="none" stroke="#9aa0c8" stroke-width="9" stroke-linecap="round"/>
+        <line x1="120" y1="52" x2="120" y2="98" stroke="#e23b3b" stroke-width="5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite"/></line></svg>`;
+      case 'torch': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M120 22 C142 44 140 64 120 72 C100 64 98 44 120 22 Z" fill="#ff8a3b"><animate attributeName="opacity" values="0.75;1;0.75" dur="1.1s" repeatCount="indefinite"/></path>
+        <path d="M120 36 C134 52 132 64 120 70 C108 64 106 52 120 36 Z" fill="#ffd86b"><animate attributeName="opacity" values="1;0.7;1" dur="0.9s" repeatCount="indefinite"/></path>
+        <rect x="113" y="72" width="14" height="54" rx="6" fill="#cdd6ff"/></svg>`;
+      case 'book': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <path d="M120 42 C90 27 50 30 30 40 V118 C50 108 90 105 120 120 Z" fill="#1c2248" stroke="#5b8cff" stroke-width="3"/>
+        <path d="M120 42 C150 27 190 30 210 40 V118 C190 108 150 105 120 120 Z" fill="#232a55" stroke="#5b8cff" stroke-width="3"/>
+        <line x1="120" y1="42" x2="120" y2="120" stroke="#5b8cff" stroke-width="3"/>
+        <g stroke="#ffd86b" stroke-width="3" stroke-linecap="round">
+          <line x1="42" y1="60" x2="100" y2="60" stroke-dasharray="60" stroke-dashoffset="60"><animate attributeName="stroke-dashoffset" values="60;0;60" dur="2.6s" repeatCount="indefinite"/></line>
+          <line x1="42" y1="80" x2="100" y2="80" stroke-dasharray="60" stroke-dashoffset="60"><animate attributeName="stroke-dashoffset" values="60;0;60" dur="2.6s" begin="0.4s" repeatCount="indefinite"/></line>
+          <line x1="140" y1="60" x2="198" y2="60" stroke-dasharray="60" stroke-dashoffset="60"><animate attributeName="stroke-dashoffset" values="60;0;60" dur="2.6s" begin="0.8s" repeatCount="indefinite"/></line>
+        </g></svg>`;
+      case 'flag': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <rect x="60" y="20" width="6" height="112" fill="#cdd6ff"/>
+        <rect x="66" y="28" width="10" height="34" fill="#e23b3b"><animate attributeName="width" values="10;104;104" keyTimes="0;0.5;1" dur="3s" repeatCount="indefinite"/></rect>
+        <circle cx="92" cy="45" r="7" fill="#ffd86b"><animate attributeName="opacity" values="0;1;1" keyTimes="0;0.5;1" dur="3s" repeatCount="indefinite"/></circle>
+        <rect x="50" y="130" width="140" height="6" rx="3" fill="#9aa0c8"/></svg>`;
+      case 'gear': return `<svg viewBox="0 0 240 150" class="anim-svg"><g>
+          <circle cx="120" cy="75" r="32" fill="#232a55" stroke="#5b8cff" stroke-width="4"/>${gearTeeth()}
+          <animateTransform attributeName="transform" type="rotate" from="0 120 75" to="360 120 75" dur="6s" repeatCount="indefinite"/></g>
+        <circle cx="120" cy="75" r="12" fill="#05081a" stroke="#e9b949" stroke-width="3"/></svg>`;
+      case 'shake': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <rect x="36" y="32" width="72" height="86" fill="#232a55" stroke="#5b8cff" stroke-width="3"/>
+        <rect x="132" y="32" width="72" height="86" fill="rgba(91,140,255,0.15)" stroke="#5b8cff" stroke-width="3"/>
+        <g><rect x="108" y="32" width="20" height="86" fill="#ffd86b">
+          <animateTransform attributeName="transform" type="rotate" values="0 108 75;-58 108 75;0 108 75" dur="3s" repeatCount="indefinite"/></rect></g>
+        <path d="M64 75 H176" stroke="#ffd86b" stroke-width="3"/>
+        <polygon points="176,75 166,69 166,81" fill="#ffd86b"/></svg>`;
+      case 'bars': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <rect x="50" y="100" width="30" height="20" fill="#5b8cff"><animate attributeName="height" values="20;60;20" dur="2.4s" repeatCount="indefinite"/><animate attributeName="y" values="100;60;100" dur="2.4s" repeatCount="indefinite"/></rect>
+        <rect x="105" y="100" width="30" height="20" fill="#ffd86b"><animate attributeName="height" values="20;80;20" dur="2.4s" begin="0.3s" repeatCount="indefinite"/><animate attributeName="y" values="100;40;100" dur="2.4s" begin="0.3s" repeatCount="indefinite"/></rect>
+        <rect x="160" y="100" width="30" height="20" fill="#e23b3b"><animate attributeName="height" values="20;100;20" dur="2.4s" begin="0.6s" repeatCount="indefinite"/><animate attributeName="y" values="100;20;100" dur="2.4s" begin="0.6s" repeatCount="indefinite"/></rect>
+        <line x1="30" y1="120" x2="210" y2="120" stroke="#cdd6ff" stroke-width="3"/></svg>`;
+      case 'leap': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <g stroke="#5b8cff" stroke-width="6" fill="none" stroke-linecap="round"><path d="M50 115 V70"/><polygon points="50,60 42,74 58,74" fill="#5b8cff" stroke="none"><animate attributeName="points" values="50,60 42,74 58,74;50,52 42,66 58,66;50,60 42,74 58,74" dur="1.8s" repeatCount="indefinite"/></polygon></g>
+        <g stroke="#ffd86b" stroke-width="6" fill="none" stroke-linecap="round"><path d="M120 115 V55"/><polygon points="120,45 112,59 128,59" fill="#ffd86b" stroke="none"><animate attributeName="points" values="120,45 112,59 128,59;120,35 112,49 128,49;120,45 112,59 128,59" dur="1.8s" begin="0.3s" repeatCount="indefinite"/></polygon></g>
+        <g stroke="#e23b3b" stroke-width="6" fill="none" stroke-linecap="round"><path d="M190 115 V40"/><polygon points="190,30 182,44 198,44" fill="#e23b3b" stroke="none"><animate attributeName="points" values="190,30 182,44 198,44;190,20 182,34 198,34;190,30 182,44 198,44" dur="1.8s" begin="0.6s" repeatCount="indefinite"/></polygon></g></svg>`;
+      case 'magnify': return `<svg viewBox="0 0 240 150" class="anim-svg">
+        <rect x="38" y="35" width="120" height="80" rx="6" fill="#1c2248" stroke="#5b8cff" stroke-width="3"/>
+        <line x1="54" y1="55" x2="142" y2="55" stroke="#9aa0c8" stroke-width="3"/>
+        <line x1="54" y1="72" x2="142" y2="72" stroke="#9aa0c8" stroke-width="3"/>
+        <line x1="54" y1="89" x2="108" y2="89" stroke="#9aa0c8" stroke-width="3"/>
+        <g><circle cx="150" cy="95" r="20" fill="none" stroke="#ffd86b" stroke-width="5"/><line x1="164" y1="109" x2="180" y2="125" stroke="#ffd86b" stroke-width="6" stroke-linecap="round"/>
+          <animateTransform attributeName="transform" type="translate" values="-60 0;12 0;-60 0" dur="3s" repeatCount="indefinite"/></g></svg>`;
+      default: return `<svg viewBox="0 0 240 150" class="anim-svg"><circle cx="120" cy="75" r="40" fill="rgba(91,140,255,0.1)" stroke="#5b8cff" stroke-width="4"/><polygon points="120,45 127,63 147,64 131,76 136,96 120,84 104,96 109,76 93,64 113,63" fill="#ffd86b"><animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/></polygon></svg>`;
+    }
+  }
+  const animMap = {
+    '时间界定':'clock','主流本质':'shield','党的初心使命':'star','必由之路与根本保证':'road',
+    '半殖民地半封建社会':'map','两大历史任务':'target','近代主要矛盾':'mountain','反侵略失败根源':'broken',
+    '五四运动':'torch','中国共产党诞生':'star','三座大山':'mountain','三种建国方案':'road',
+    '毛泽东思想':'book','新中国成立':'flag','社会主义革命和建设':'gear','改革开放开端':'shake',
+    '三大历史性跨越':'bars','中国特色社会主义理论体系':'book','新时代':'leap','两个确立':'star',
+    '马克思主义中国化三次飞跃':'leap','学习目的':'book','四个选择':'road','三个为什么':'target',
+    '五个要求':'shield','警惕历史虚无主义':'magnify'
+  };
+  const chapterAnim = { overview:'shield', ch1:'torch', ch2:'flag', ch3:'book' };
+  function animBox(key){ return '<div class="animbox">'+animSVG(key||'star')+'</div>'; }
+  // 真实历史图片优先；加载失败时自动回退到示意动画
+  function histImgHTML(kp){
+    if(!kp.img) return animBox(animMap[kp.title]);
+    return '<div class="histimg" data-title="'+escapeAttr(kp.title)+'">'+
+      '<img src="'+escapeAttr(kp.img)+'" alt="'+escapeAttr(kp.title)+' 历史图片" loading="lazy" onerror="showImgFallback(this.parentNode)">'+
+      '<div class="imgcap">真实历史图片 · 来源：维基共享资源</div></div>';
+  }
+  function showImgFallback(wrap){
+    if(wrap.dataset.fb) return; wrap.dataset.fb='1';
+    const t=wrap.dataset.title||'';
+    wrap.innerHTML=animBox(animMap[t]||'star')+'<div class="imgcap">（图片未能加载，已显示示意插图）</div>';
+  }
+
+  /* ====================== TTS（Edge TTS Worker） ====================== */
+  const TTS_URL='https://api.xiemojy.mom/v1/audio/speech';
+  let globalAudio=null, currentBtn=null, audioUnlocked=false;
+  function loadVoice(){ try{return localStorage.getItem('tts_voice_preference')||'zh-CN-XiaoxiaoNeural';}catch(e){return 'zh-CN-XiaoxiaoNeural';} }
+  function saveVoice(v){ try{localStorage.setItem('tts_voice_preference',v);}catch(e){} }
+  function getAudio(){ if(!globalAudio){ globalAudio=new Audio(); globalAudio.preload='auto';
+      globalAudio.setAttribute('playsinline','true'); globalAudio.setAttribute('webkit-playsinline','true'); } return globalAudio; }
+  function stopSpeech(){ if(globalAudio){ try{globalAudio.pause();globalAudio.currentTime=0;}catch(e){} }
+    if(currentBtn){ currentBtn.classList.remove('speaking','loading'); currentBtn=null; } }
+  function unlockIOSAudio(){ try{ const s=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='); s.volume=0; s.play().catch(()=>{}); }catch(e){} }
+  async function speak(text, btn){
+    if(!text) return;
+    if(currentBtn===btn && globalAudio && !globalAudio.paused){ stopSpeech(); return; }
+    stopSpeech();
+    if(btn){ btn.classList.add('loading'); currentBtn=btn; }
+    try{
+      const voice=loadVoice();
+      const res=await fetch(TTS_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({input:text,voice:voice,speed:0.95})});
+      if(!res.ok) throw new Error('TTS 请求失败: '+res.status);
+      const blob=await res.blob(); const url=URL.createObjectURL(blob);
+      const audio=getAudio(); audio.src=url;
+      if(btn){ btn.classList.remove('loading'); btn.classList.add('speaking'); }
+      audio.onended=()=>{ if(btn) btn.classList.remove('speaking'); if(currentBtn===btn) currentBtn=null; URL.revokeObjectURL(url); };
+      audio.onerror=()=>{ if(btn) btn.classList.remove('speaking'); if(currentBtn===btn) currentBtn=null; URL.revokeObjectURL(url); };
+      try{ await audio.play(); audioUnlocked=true; }
+      catch(e){ if(btn) btn.classList.remove('speaking'); currentBtn=null; URL.revokeObjectURL(url);
+        if(!audioUnlocked) alert('请再点击一次发音按钮（微信需先激活音频权限）'); }
+    }catch(err){ console.error('TTS 失败',err); if(btn) btn.classList.remove('loading','speaking');
+      if(currentBtn===btn) currentBtn=null; alert('语音播放失败：'+err.message); }
+  }
+  window.addEventListener('load',unlockIOSAudio);
+
+  const voiceSelect=document.getElementById('voiceSelect');
+  voiceSelect.value=loadVoice();
+  voiceSelect.addEventListener('change',()=>saveVoice(voiceSelect.value));
+
+  /* ====================== 弹窗 ====================== */
+  const panel=document.getElementById('panel');
+  const panelTag=document.getElementById('panelTag'),panelTitle=document.getElementById('panelTitle'),
+        panelSub=document.getElementById('panelSub'),panelBody=document.getElementById('panelBody');
+  function escapeAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function speakBtn(text){ return '<button class="speak-btn" data-speak="'+escapeAttr(text)+'">🔊 朗读知识点</button>'; }
+
+  /* 知识点卡片的「影像 · 史料」区块：数据来自 media.js（window.KP_MEDIA，按知识点标题索引）
+     没有采集内容时返回空串，卡片保持干净、不留空框。 */
+  function kpMediaHTML(title){
+    const M = (typeof window!=='undefined' && window.KP_MEDIA) ? window.KP_MEDIA : null;
+    if(!M) return '';
+    const m = M[title]; if(!m) return '';
+    const v = m.v||[], d = m.d||[], note = m.note||'';
+    if(!v.length && !d.length && !note) return '';
+    const one=(x, cls, ic)=>{
+      const u = x && x.u ? String(x.u) : '';
+      const t = (x && x.t) ? x.t : (u ? u.replace(/^https?:\/\//,'').slice(0,46) : '未命名条目');
+      let sub = (x && x.n) ? x.n : '';
+      if(!sub && u){ const mm=u.match(/^https?:\/\/([^\/]+)/); sub = mm? mm[1] : ''; }
+      const tag = u ? 'a' : 'div';
+      return '<'+tag+' class="kmed '+cls+'"'+(u?' href="'+escapeAttr(u)+'" target="_blank" rel="noopener noreferrer"':'')
+        +'><span class="ic">'+ic+'</span><span class="tx">'+escapeAttr(t)
+        +(sub?'<small>'+escapeAttr(sub)+'</small>':'')+'</span></'+tag+'>';
+    };
+    let h='<div class="kmedia"><h3>🎬 影像与史料<span class="n">共 '+(v.length+d.length)+' 条</span></h3>';
+    const isImg = u => /\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$/i.test(u) || /^data:image\//.test(u);
+    const figs = d.filter(x=>isImg(String((x&&x.u)||'')));
+    const rest = d.filter(x=>!isImg(String((x&&x.u)||'')));
+    v.forEach(x=>{ h+=one(x,'','▶'); });
+    if(figs.length){
+      h+='<div class="kfigs">'+figs.map(x=>{
+        const u=String(x.u), t=(x.t||''), ill=(x&&x.ill)?1:0;
+        return '<figure class="kfig'+(ill?' ill':'')+'"><a href="'+escapeAttr(u)+'" target="_blank" rel="noopener noreferrer">'
+          +'<img src="'+escapeAttr(u)+'" alt="'+escapeAttr(t)+'" loading="lazy"'
+          +' onerror="this.parentNode.parentNode.classList.add(\'bad\')"></a>'
+          +(ill?'<span class="kfig-badge">示意图</span>':'')
+          +(t?'<figcaption>'+escapeAttr(t)+(x.n?'<small>'+escapeAttr(x.n)+'</small>':'')+'</figcaption>':'')
+          +'</figure>';
+      }).join('')+'</div>';
+    }
+    rest.forEach(x=>{ h+=one(x,'doc','▤'); });
+    if(note) h+='<div class="kmed-note">'+escapeAttr(note)+'</div>';
+    return h+'</div>';
+  }
+  window.kpMediaHTML=kpMediaHTML;   // 供真题模块（独立闭包）调用
+  function kpQuizHTML(kp){
+    if(!kp.quiz) return '';
+    const q=kp.quiz;
+    if(q.type==='fill'){
+      let h='<div class="kquiz"><h3>📝 本知识点自测（填空 · 点击显示答案）</h3><div class="kq">'+q.q+'</div>';
+      h+='<div class="kfill"><div class="kfillReveal" id="kfillReveal" tabindex="0" role="button">👉 点击此处显示答案</div></div>';
+      h+='<div class="kexp" id="kexp">正确答案：<span class="ans">'+q.answer+'</span>。<br>'+q.exp+'</div></div>';
+      return h;
+    }
+    let h='<div class="kquiz"><h3>📝 本知识点自测（选择）</h3><div class="kq">'+q.q+'</div>';
+    q.opts.forEach((o,j)=>{ h+='<label class="kopt" data-j="'+j+'"><input type="radio" name="kq" value="'+j+'"><span>'+o+'</span></label>'; });
+    h+='<button class="kcheck" id="kcheck">检验答案</button><div class="kexp" id="kexp">'+q.exp+'</div></div>';
+    return h;
+  }
+  function openKP(kp){
+    const c=chapterMeta[kp.ch];
+    const idx=knowledge.indexOf(kp);
+    currentKpIdx=idx;
+    // 弹窗开时目录隐藏，记录原状态以便关闭后重现
+    const tocEl=document.getElementById('toc');
+    if(tocEl.classList.contains('open')){ tocWasOpen=true; tocEl.classList.remove('open'); }
+    // 对应星点放大并聚焦
+    focusedIdx=idx; applyFocusScale(); selectedIdx=idx;
+    panelTag.textContent=c.label+' · 知识点'; panelTag.style.background=c.color+'33'; panelTag.style.color=c.color;
+    panelTitle.textContent=kp.title; panelSub.textContent='所属：'+c.title;
+    panelBody.innerHTML='<p>'+kp.speak+'</p>'+speakBtn(kp.speak)+
+      '<button class="speak-btn tour-btn" type="button" data-tour="1">🌌 在星空中看这张拓扑</button>'+
+      kpMediaHTML(kp.title)+
+      '<div class="jump" data-jump="'+kp.ch+'">查看所属章节 ▸</div>'+relChipsHTML(kp)+kpQuizHTML(kp);
+    // 显示 上一个/下一个 导航，并显示当前序号
+    document.getElementById('pnav').style.display='flex';
+    document.getElementById('kpOrder').textContent=(idx+1)+' / '+knowledge.length;
+    panelBody.scrollTop=0;
+    panel.classList.add('open'); stopSpeech(); bindKPQuiz(kp);
+    if(topoLight) topoLight(kp);   // 点亮该知识点及其关联拓扑，并记入「已学」
+  }
+  function normAnswer(s){ return (s||'').trim().toLowerCase().replace(/[\s，。、．.,；;：:！!？?（）()"'']/g,''); }
+  function bindKPQuiz(kp){
+    const kc=panelBody.querySelector('#kcheck'); if(kc){
+      kc.onclick=()=>{ const q=kp.quiz; const exp=panelBody.querySelector('#kexp');
+        const sel=panelBody.querySelector('input[name="kq"]:checked'); const opts=panelBody.querySelectorAll('.kopt');
+        opts.forEach(o=>{ const j=+o.dataset.j; o.classList.toggle('correct', j===q.a);
+          if(sel && +sel.value===j && j!==q.a) o.classList.add('wrong'); });
+        exp.classList.add('show'); };
+    }
+    const rev=panelBody.querySelector('#kfillReveal'); if(rev){
+      const q=kp.quiz; const exp=panelBody.querySelector('#kexp');
+      const doReveal=()=>{ rev.innerHTML='✅ 答案：<span class="ans">'+q.answer+'</span>'; rev.classList.add('show'); exp.classList.add('show'); };
+      rev.onclick=doReveal;
+      rev.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); doReveal(); } };
+    }
+  }
+  function openChapter(ch){
+    const c=chapterMeta[ch];
+    const tocEl=document.getElementById('toc');
+    if(tocEl.classList.contains('open')){ tocWasOpen=true; tocEl.classList.remove('open'); }
+    focusedIdx=null; selectedIdx=null; applyFocusScale();
+    panelTag.textContent=c.tag; panelTag.style.background=c.color+'33'; panelTag.style.color=c.color;
+    panelTitle.textContent=c.title; panelSub.textContent=c.sub;
+    panelBody.innerHTML=chapterDetail[ch].html+'<h3>📢 整章朗读</h3>'+speakBtn(c.speak);
+    // 整章弹窗不显示知识点间的上一个/下一个导航
+    document.getElementById('pnav').style.display='none';
+    panel.classList.add('open'); stopSpeech();
+  }
+  panelBody.addEventListener('click',e=>{
+    const sb=e.target.closest('.speak-btn:not(.tour-btn)'); if(sb){ speak(sb.dataset.speak, sb); return; }
+    const tb=e.target.closest('.tour-btn');
+    if(tb){ if(topoTour && currentKpIdx!=null) topoTour(knowledge[currentKpIdx]); return; }
+    const jp=e.target.closest('.jump'); if(jp){ openChapter(jp.dataset.jump); return; }
+    const kc=e.target.closest('.krel-chip');
+    if(kc){ const kp=knowledge[+kc.dataset.kp]; if(kp){ if(topoFocus) topoFocus(kp); openKP(kp); } }
+  });
+  function closePanel(){ panel.classList.remove('open'); stopSpeech();
+    focusedIdx=null; selectedIdx=null; applyFocusScale();
+    fly=null; // 解除聚焦飞行，交还缩放/旋转控制权
+    if(tocWasOpen){ openTOC(); tocWasOpen=false; }
+    // 平滑回到总览视角，星点恢复常规大小（可重新缩小/旋转）
+    fly={target:new THREE.Vector3(0,6,0), cam:new THREE.Vector3(0,7,48)};
+    if(topoUnlight) topoUnlight(9000);   // 关窗后拓扑再亮 9 秒，让用户看清这张子图
+  }  document.getElementById('panelClose').onclick=closePanel;
+  document.getElementById('panelBackdrop').onclick=closePanel;
+  // 知识点弹窗内：上一个 / 下一个（按知识点顺序翻看，无需反复回到目录）
+  function goKp(delta){ if(currentKpIdx==null) return;
+    const ni=(currentKpIdx+delta+knowledge.length)%knowledge.length; const kp=knowledge[ni];
+    const tocEl=document.getElementById('toc');
+    if(tocEl.classList.contains('open')){ tocWasOpen=true; tocEl.classList.remove('open'); }
+    focusNode(kp); openKP(kp); }
+  document.getElementById('kpPrev').onclick=()=>goKp(-1);
+  document.getElementById('kpNext').onclick=()=>goKp(1);
+
+  /* ====================== 顶部导航 ====================== */
+  let currentFilter=null;
+  // 弹窗/星点聚焦与目录联动状态
+  let focusedIdx=null, selectedIdx=null, tocWasOpen=false, currentKpIdx=null;
+  const FOCUS_SCALE=1.7;
+  function applyFocusScale(){} // 星星缩放已在渲染循环中按 focusedIdx / hoveredIdx 统一处理
+  document.querySelectorAll('.navbtn[data-ch]').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('.navbtn[data-ch]').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); currentFilter=b.dataset.ch; updateFilter();
+      // 纯星云模式下没有星星可高亮，改为把镜头飞向该章星群（导言在这一簇）
+      const cc=clusterCenter[b.dataset.ch];
+      if(cc) fly={target:cc.clone(),cam:cc.clone().add(new THREE.Vector3(0,4,26))}; };
+  });
+  document.getElementById('btnReset').onclick=()=>{ currentFilter=null;
+    document.querySelectorAll('.navbtn[data-ch]').forEach(x=>x.classList.remove('active'));
+    panel.classList.remove('open'); closeTOC(); stopSpeech(); fly=null;
+    focusedIdx=null; selectedIdx=null; tocWasOpen=false; applyFocusScale();
+    computeTopo();
+    if(controls){ controls.target.set(0,6,0); camera.position.set(0,7,50); controls.update(); } };
+
+  /* ====================== 课程目录（整体结构） ====================== */
+  let fly=null; // 相机飞行补间目标
+  function focusNode(kp){ if(typeof cardGrps==='undefined'||!cardGrps) return; const i=chapterIdx[kp.title]; const p=cardGrps[i].userData.target.clone();
+    const dir=new THREE.Vector3(p.x,0,p.z); if(dir.lengthSq()<0.01) dir.set(0,0,1); dir.normalize();
+    // 飞行落点距离须 ≥ controls.minDistance，否则 fly 永远无法完成、会与用户缩放互相打架
+    const camPos=p.clone().add(dir.multiplyScalar(24)).add(new THREE.Vector3(0,3,0));
+    fly={target:p,cam:camPos}; }
+  function openTOC(){ document.getElementById('toc').classList.add('open'); }
+  function closeTOC(){ document.getElementById('toc').classList.remove('open'); }
+  document.getElementById('btnTOC').onclick=openTOC;
+  document.getElementById('tocClose').onclick=closeTOC;
+  document.getElementById('tocBackdrop').onclick=closeTOC;
+  // 新增：Esc 关闭目录/大纲
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeTOC(); closeOutline(); } });
+  (function buildTOC(){
+    const tocBody=document.getElementById('tocBody'); let h='';
+    partOrder.forEach(pid=>{ const p=partMeta[pid];
+      const chs=chapterOrder.filter(c=>chapterMeta[c].part===pid);
+      h+='<div class="toc-part" style="--c:'+p.color+'"><div class="toc-part-h">'+p.title+'</div>';
+      chs.forEach(ch=>{ const c=chapterMeta[ch]; const list=knowledge.filter(k=>k.ch===ch);
+        // 默认折叠（collapsed），点击章标题可展开/收起知识点
+        h+='<div class="toc-ch collapsed" style="--c:'+c.color+'"><div class="toc-ch-h" data-ch="'+ch+'">'+
+             '<span class="toc-ch-label">'+c.label+' · '+c.sub+'</span>'+
+             '<span class="cnt"><span class="chev">▾</span> '+list.length+' 个知识点</span>'+
+             '<button class="toc-focus" data-focus="'+ch+'">🎯</button></div>';
+        h+='<div class="toc-list">';
+        list.forEach(k=>{ h+='<div class="toc-item" data-idx="'+knowledge.indexOf(k)+'"><span class="dot" style="background:'+c.color+'"></span><span class="t">'+k.title+'</span></div>'; });
+        h+='</div></div>'; });
+      h+='</div>'; });
+    tocBody.innerHTML=h;
+    tocBody.querySelectorAll('.toc-item').forEach(el=>el.onclick=()=>{ const kp=knowledge[+el.dataset.idx];
+      focusNode(kp); openKP(kp); });
+    // 章标题：展开/收起该章知识点（默认折叠）
+    tocBody.querySelectorAll('.toc-ch-h').forEach(el=>el.onclick=()=>{ el.closest('.toc-ch').classList.toggle('collapsed'); });
+    // 🎯 按钮：聚焦该章星群（不触发折叠）
+    tocBody.querySelectorAll('.toc-focus').forEach(el=>el.onclick=e=>{ e.stopPropagation();
+      if(typeof clusterCenter==='undefined'||!clusterCenter) return; // 降级（无 3D）时不聚焦
+      const ch=el.dataset.focus; const cc=clusterCenter[ch]; fly={target:cc.clone(),cam:cc.clone().add(new THREE.Vector3(0,4,26))}; });
+  })();
+
+  /* ====================== 课程大纲（框架轮廓） ====================== */
+  function buildOutline(){
+    const wrap=document.getElementById('outlineBody');
+    const SYL=(typeof syllabusMeta!=='undefined'&&syllabusMeta)?syllabusMeta:null;
+    const LV=[['识记','l1','Ⅰ'],['领会','l2','Ⅱ'],['简单应用','l3','Ⅲ'],['综合应用','l4','Ⅳ']];
+    let h='<div class="ol-top">本面板按<b>全国高等教育自学考试指导委员会 2024 年 8 月修订</b>的《中国近现代史纲要》课程考试大纲组织：每章依次给出<b>学习目的与要求</b>、<b>课程内容</b>、<b>考核知识点与考核要求</b>、<b>本章重点</b>，并可与星图中对应知识点对照学习。';
+    h+='<div class="ol-bar"><i style="width:20%;background:#5b8cff"></i><i style="width:40%;background:#4cd978"></i><i style="width:20%;background:#e9b949"></i><i style="width:20%;background:#e23b3b"></i></div>';
+    h+='<div class="ol-legend">能力层次四级递进，试卷分值比例：<b>识记 Ⅰ 20%</b> · <b>领会 Ⅱ 40%</b> · <b>简单应用 Ⅲ 20%</b> · <b>综合应用 Ⅳ 20%</b>。主要题型为单项选择题、简答题、论述题；闭卷笔试，满分 100 分，60 分及格，考试时间 150 分钟。考试之日前 6 个月内新制定或修订的法律法规列入考试范围。</div></div>';
+    partOrder.forEach(pid=>{ const p=partMeta[pid];
+      h+='<div class="ol-ch" style="--c:'+p.color+';margin-top:8px"><div class="ol-ch-h" style="font-size:16px"><span class="dot" style="background:'+p.color+'"></span>'+p.title+'</div></div>';
+      chapterOrder.filter(ch=>chapterMeta[ch].part===pid).forEach(ch=>{ const c=chapterMeta[ch];
+        const s=SYL?SYL[ch]:null;
+        const kps=knowledge.filter(k=>k.ch===ch).map(k=>k.title);
+        h+='<div class="ol-subch" style="--c:'+c.color+'">';
+        // 章标题：优先用大纲章名，教材章名不同则并列标注
+        const olName = (s&&s.head) ? ((s.label?s.label+' ':'')+s.head) : (c.label+' · '+c.sub);
+        h+='<div class="ol-ch-h" style="font-size:14px"><span class="dot" style="background:'+c.color+'"></span>'+olName+'</div>';
+        if(ch!=='intro'&&s&&s.head&&c.title&&c.title.indexOf(s.head)<0){
+          h+='<div style="font-size:11.5px;color:#9aa0c8;margin:2px 0 0 18px">教材章名：'+c.title+'</div>';
+        }
+        if(s){
+          if(s.aim&&s.aim.length){
+            h+='<div class="ol-sec"><b>📌 学习目的与要求</b><ol class="ol-ul">'+s.aim.map(t=>'<li>'+t+'</li>').join('')+'</ol></div>';
+          }
+          if(s.sections&&s.sections.length){
+            h+='<div class="ol-sec"><b>📚 课程内容</b><ol class="ol-ul">'+s.sections.map(t=>'<li>'+t+'</li>').join('')+'</ol></div>';
+          }
+          if(s.exam&&s.exam.length){
+            h+='<div class="ol-sec"><b>✅ 考核知识点与考核要求</b>';
+            s.exam.forEach(e=>{
+              h+='<div class="ol-exam"><div class="ol-exam-h">'+e.n+'. '+(e.sec||'')+'</div>';
+              LV.forEach(function(lv){ const arr=e.req&&e.req[lv[0]]; if(!arr||!arr.length) return;
+                h+='<div class="ol-req"><span class="ol-lv '+lv[1]+'">'+lv[2]+' '+lv[0]+'</span>'+arr.join(' · ')+'</div>';
+              });
+              h+='</div>';
+            });
+            h+='</div>';
+          }
+          if(s.focus&&s.focus.length){
+            h+='<div class="ol-sec"><b>🎯 本章重点</b><ul class="ol-ul">'+s.focus.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>';
+          }
+        }
+        h+='<div class="ol-sec"><b>📖 本章主干</b><p>'+c.speak+'</p></div>';
+        h+='<div class="ol-sec ol-how"><b>🧭 怎么学</b><p>'+c.how+'</p></div>';
+        if(kps.length){
+          h+='<details class="ol-kps"><summary>📍 本章知识点（'+kps.length+' 个，点击展开）</summary><ul class="ol-ul">'+kps.map(t=>'<li>'+t+'</li>').join('')+'</ul></details>';
+        }
+        h+='</div>';
+      });
+    });
+    wrap.innerHTML=h;
+  }
+  function openOutline(){ buildOutline(); document.getElementById('outline').classList.add('open'); }
+  function closeOutline(){ document.getElementById('outline').classList.remove('open'); }
+  document.getElementById('btnOutline').onclick=openOutline;
+  document.getElementById('outlineClose').onclick=closeOutline;
+  document.getElementById('outline').addEventListener('click',e=>{ if(e.target.id==='outline') closeOutline(); });
+
+  /* ====================== 3D 场景（Three.js） ====================== */
+  const app=document.getElementById('app');
+  const hasTHREE = (typeof THREE!=='undefined' && THREE.OrbitControls);
+  if(!hasTHREE){ startFallback(); return; }
+
+  const baseY=2;
+  let autoRotatePaused=false;
+
+  // 星空背景（HTML 备用星星，数量随知识点增多）
+  const STAR_FACTOR = knowledge.length; // 知识点越多，背景星星越多
+  const htmlStarN = STAR_FACTOR*7;
+  for(let i=0;i<htmlStarN;i++){ const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*2+1; s.style.width=sz+'px'; s.style.height=sz+'px';
+    s.style.left=Math.random()*100+'%'; s.style.top=Math.random()*100+'%';
+    s.style.animationDelay=(Math.random()*3)+'s'; app.appendChild(s); }
+
+  const scene=new THREE.Scene(); scene.fog=new THREE.FogExp2(0x05081a,0.0065);
+  const camera=new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0,7,50);
+  const renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setClearColor(0x000000,0); // 透明，露出 CSS 星云背景
+  app.appendChild(renderer.domElement);
+
+  const controls=new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.08;
+  controls.minDistance=16; controls.maxDistance=110; controls.maxPolarAngle=Math.PI*0.86;
+  controls.target.set(0,6,0); controls.autoRotate=false;
+
+  scene.add(new THREE.AmbientLight(0x8899ff,0.6));
+  const dir=new THREE.DirectionalLight(0xffffff,0.85); dir.position.set(8,16,10); scene.add(dir);
+  const p1=new THREE.PointLight(0xe9b949,0.9,120); p1.position.set(-22,12,14); scene.add(p1);
+  const p2=new THREE.PointLight(0x5b8cff,0.9,120); p2.position.set(22,12,14); scene.add(p2);
+
+  // 星云背景（行星云：多彩气体云，缓慢流动）
+  let starMat=null;
+  const nebGroup=new THREE.Group();
+  (function(){
+    const cols=['150,90,255','60,120,255','255,90,170','40,210,190','255,170,70','120,80,220'];
+    cols.forEach((rgb,i)=>{
+      const cv=document.createElement('canvas'); cv.width=cv.height=256; const g=cv.getContext('2d');
+      const grd=g.createRadialGradient(128,128,0,128,128,128);
+      grd.addColorStop(0,'rgba('+rgb+',0.55)'); grd.addColorStop(0.4,'rgba('+rgb+',0.20)'); grd.addColorStop(1,'rgba('+rgb+',0)');
+      g.fillStyle=grd; g.fillRect(0,0,256,256);
+      const tex=new THREE.CanvasTexture(cv);
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.4,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
+      const ang=(i/cols.length)*Math.PI*2; const R=30+Math.random()*30;
+      sp.position.set(Math.cos(ang)*R, 5+Math.random()*16, -28-Math.random()*42);
+      const sc=70+Math.random()*46; sp.scale.set(sc,sc,1);
+      sp.material.opacity=0.15+Math.random()*0.13; nebGroup.add(sp);
+    });
+  })();
+  scene.add(nebGroup);
+
+
+  // 点云星空（闪烁：自定义着色器，每颗星独立相位）
+  let starCloud=null;
+  (function(){
+    let n=Math.round(STAR_FACTOR*110), arr=new Float32Array(n*3), phase=new Float32Array(n), sz=new Float32Array(n);
+    for(let i=0;i<n;i++){ const r=80+Math.random()*190, t=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+      arr[i*3]=r*Math.sin(ph)*Math.cos(t); arr[i*3+1]=Math.abs(r*Math.cos(ph))*0.7-12; arr[i*3+2]=r*Math.sin(ph)*Math.sin(t);
+      phase[i]=Math.random()*Math.PI*2; sz[i]=0.5+Math.random()*1.4; }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(arr,3));
+    g.setAttribute('aPhase',new THREE.BufferAttribute(phase,1));
+    g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+    const mat=new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0}, uColor:{value:new THREE.Color(0x9fb2ff)} },
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      vertexShader:`attribute float aPhase; attribute float aSize; uniform float uTime; varying float vTw;
+        void main(){ float tw=0.45+0.55*sin(uTime*1.6+aPhase); vTw=tw;
+          vec4 mv=modelViewMatrix*vec4(position,1.0);
+          gl_PointSize=aSize*(0.6+0.8*tw)*(300.0/-mv.z); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader:`uniform vec3 uColor; varying float vTw;
+        void main(){ vec2 d=gl_PointCoord-vec2(0.5); float r=length(d); if(r>0.5) discard;
+          float a=smoothstep(0.5,0.0,r)*(0.14+0.34*vTw); gl_FragColor=vec4(uColor,a); }`
+    });
+    starCloud=new THREE.Points(g,mat); scene.add(starCloud); starMat=mat;
+  })();
+
+  // 地面光环（弱化的空间参照，保持干净星空观感）
+  const grid=new THREE.GridHelper(110,40,0x3a4a8c,0x16204a); grid.material.transparent=true; grid.material.opacity=0.08; grid.position.y=-4; scene.add(grid);
+
+  /* ---------- 章节聚簇中心 + 标签 ---------- */
+  // 章节聚簇中心：由 data.js 的 clusterRaw（纯数据）转换得到
+  const clusterCenter={};
+  chapterOrder.forEach(ch=>{ const v=clusterRaw[ch]||{x:0,y:0,z:0}; clusterCenter[ch]=new THREE.Vector3(v.x,v.y,v.z); });
+  // 编（一级目录）区域标签：取该编各章节聚簇中心的平均位置（自动，无需手工维护）
+  const partCenter={};
+  partOrder.forEach(pid=>{ const chs=chapterOrder.filter(c=>chapterMeta[c].part===pid);
+    const v=new THREE.Vector3(); chs.forEach(c=>v.add(clusterCenter[c]));
+    partCenter[pid]=chs.length? v.multiplyScalar(1/chs.length) : new THREE.Vector3(0,0,0); });
+  const worldLabels=[];   // 纯星云模式：编/章标签不再创建（makeLabel 保留，需要文字模式时再启用）
+
+  /* ---------- 知识节点：星空拓扑（发光星点 + 图标标签） ---------- */
+  const cardGrps=[]; const nodeMeshes=[]; const chapterIdx={};
+  const starTex=(function(){ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d'); const cx=128,cy=128;
+    // 纯柔光星点（不用五角星造型，和星云气质一致；点亮时像一颗真正亮起来的星）
+    const grd=g.createRadialGradient(cx,cy,0,cx,cy,128);
+    grd.addColorStop(0,'rgba(255,255,255,1)');
+    grd.addColorStop(0.16,'rgba(255,250,232,0.95)');
+    grd.addColorStop(0.34,'rgba(255,224,158,0.62)');
+    grd.addColorStop(0.58,'rgba(196,178,255,0.18)');
+    grd.addColorStop(0.82,'rgba(140,140,255,0.05)');
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=grd; g.fillRect(0,0,256,256);
+    // 十字星芒：极淡，只为让「亮起来的节点」有一点呼吸感
+    g.globalCompositeOperation='lighter';
+    const ray=g.createLinearGradient(0,cy,256,cy);
+    ray.addColorStop(0,'rgba(255,235,190,0)'); ray.addColorStop(0.5,'rgba(255,245,215,0.5)'); ray.addColorStop(1,'rgba(255,235,190,0)');
+    g.fillStyle=ray; g.fillRect(0,cy-2,256,4);
+    const ray2=g.createLinearGradient(cx,0,cx,256);
+    ray2.addColorStop(0,'rgba(255,235,190,0)'); ray2.addColorStop(0.5,'rgba(255,245,215,0.5)'); ray2.addColorStop(1,'rgba(255,235,190,0)');
+    g.fillStyle=ray2; g.fillRect(cx-2,0,4,256);
+    return new THREE.CanvasTexture(c); })();
+  const STAR_BASE_SCALE=3.6;
+  const _perChCnt={};
+  knowledge.forEach((kp,i)=>{ chapterIdx[kp.title]=i;
+    const _ci=(_perChCnt[kp.ch]=(_perChCnt[kp.ch]||0)+1)-1;
+    const grp=new THREE.Group(); grp.userData={type:'kp',kp:kp,idx:i,ci:_ci,target:new THREE.Vector3(),topo:new THREE.Vector3(),twPhase:Math.random()*Math.PI*2,dim:false,op:0,sc:STAR_BASE_SCALE*0.8,learned:false};
+    // 隐形命中球（保留对象以备将来恢复拾取；当前纯星云模式不参与点击判定，直接隐藏省开销）
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(1.7,16,12), new THREE.MeshBasicMaterial({color:0xffe9b0,transparent:true,opacity:0,depthWrite:false}));
+    orb.renderOrder=-1; orb.visible=false;
+    orb.userData=grp.userData; grp.add(orb); nodeMeshes.push(orb);
+    // 知识点星星主体：隐藏不显示 —— 画面只保留星云，星点仅作为点击定位的锚点存在
+    const star=new THREE.Sprite(new THREE.SpriteMaterial({map:starTex,color:0xffc65e,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));
+    star.scale.set(STAR_BASE_SCALE,STAR_BASE_SCALE,1); star.visible=false; grp.add(star);
+    grp.userData.orb=orb; grp.userData.star=star;
+    grp.userData.lbl=null;   // 纯星云模式：不创建知识点文字（makeNodeLabel 保留，需要时再启用）
+    scene.add(grp); cardGrps.push(grp);
+  });
+
+  // 关系索引（只保留两端都存在的）
+  const relIdx = relationDefs.map(r=>({a:chapterIdx[r[0]], b:chapterIdx[r[1]], label:r[2]}))
+                             .filter(r=>r.a!=null && r.b!=null && r.a!==r.b);
+  // 邻接表：节点 → [{j:相邻节点, label:关系说明, ei:连线序号}]
+  const relAdj = knowledge.map(()=>[]);
+  relIdx.forEach((r,k)=>{ relAdj[r.a].push({j:r.b,label:r.label,ei:k});
+                          relAdj[r.b].push({j:r.a,label:r.label,ei:k}); });
+
+  /* ---------- 点亮系统：本节点 + 一跳 + 二跳 + 全部已学 ---------- */
+  const LEARNED = learnRead();                                   // Set<title> 学过的知识点
+  knowledge.forEach((kp,i)=>{ cardGrps[i].userData.learned=LEARNED.has(kp.title); });
+  const LIT={center:-1, near:new Set(), far:new Set(), edges:new Set(), spokes:null, all:false};
+  let litTimer=null;
+
+  function syncStarMapBtn(){
+    const b=document.getElementById('smCount');
+    if(b) b.textContent=LEARNED.size+'/'+knowledge.length;
+    const n=document.getElementById('smNum'), bar=document.getElementById('smBar');
+    if(n) n.textContent='已点亮 '+LEARNED.size+' / '+knowledge.length+' 个知识点';
+    if(bar) bar.style.width=(knowledge.length? LEARNED.size/knowledge.length*100 : 0).toFixed(1)+'%';
+  }
+  function setLitAll(v){
+    LIT.all=v;
+    const b=document.getElementById('btnStarMap'); if(b) b.classList.toggle('active',v);
+    const p=document.getElementById('smPanel'); if(p) p.classList.toggle('open',v);
+  }
+  function markLearned(kp){
+    const i=TITLE_IDX[kp.title]; if(i==null) return;
+    cardGrps[i].userData.learned=true;
+    if(LEARNED.has(kp.title)) return;
+    LEARNED.add(kp.title); learnWrite(LEARNED); syncStarMapBtn();
+  }
+  function nearestSameChapter(kp,n){
+    const ci=TITLE_IDX[kp.title]; if(ci==null) return [];
+    const p=cardGrps[ci].userData.topo;
+    return knowledge.map((k,i)=>i).filter(i=>knowledge[i].ch===kp.ch && i!==ci)
+      .sort((a,b)=>cardGrps[a].userData.topo.distanceToSquared(p)-cardGrps[b].userData.topo.distanceToSquared(p))
+      .slice(0,n);
+  }
+  // 点亮一个知识点的拓扑：它自己最亮，直接相连的一跳次之，二跳再暗一层；连线一并点亮
+  function lightTopo(kp){
+    const c=TITLE_IDX[kp.title]; if(c==null) return;
+    clearTimeout(litTimer);
+    markLearned(kp);                                  // 看过即算「学过」，越学星图越亮
+    const near=new Set(), far=new Set(), edges=new Set();
+    (relAdj[c]||[]).forEach(e=>{ near.add(e.j); edges.add(e.ei); });
+    near.forEach(j=>{ (relAdj[j]||[]).forEach(e=>{
+      if(e.j===c || near.has(e.j)) return;
+      far.add(e.j); edges.add(e.ei); }); });
+    // 有些知识点在关系表里没有连线：退化为同章最近的 4 个，用「辐条」连到中心，仍然是一片能亮起的星图
+    let spokes=null;
+    if(!near.size && !far.size){
+      const mates=nearestSameChapter(kp,4);
+      mates.forEach(i=>near.add(i));
+      spokes=mates.map(i=>[c,i]);
+    }
+    LIT.center=c; LIT.near=near; LIT.far=far; LIT.edges=edges; LIT.spokes=spokes;
+    if(LIT.all) setLitAll(false);
+  }
+  function unlightTopo(delay){
+    clearTimeout(litTimer);
+    litTimer=setTimeout(()=>{ LIT.center=-1; LIT.near=new Set(); LIT.far=new Set(); LIT.edges=new Set(); LIT.spokes=null; },
+                        delay==null?9000:delay);
+  }
+  topoLight=lightTopo; topoUnlight=unlightTopo; topoFocus=focusNode;
+  // 关掉弹窗、把这张拓扑留在星空里看：镜头贴近该星群，点亮保持 45 秒
+  topoTour=function(kp){ closePanel(); lightTopo(kp); unlightTopo(45000); focusNode(kp); };
+  syncStarMapBtn();
+
+  // 🌠 星图总览：把学过的知识点全部点亮，一眼看出「学到哪儿了」
+  (function(){
+    const b=document.getElementById('btnStarMap');
+    if(b) b.onclick=()=>{
+      const on=!LIT.all;
+      if(on){ clearTimeout(litTimer); LIT.center=-1; LIT.near=new Set(); LIT.far=new Set(); LIT.edges=new Set(); LIT.spokes=null; }
+      setLitAll(on); syncStarMapBtn();
+      if(on) fly={target:new THREE.Vector3(0,6,0), cam:new THREE.Vector3(0,7,50)};
+    };
+    // 清空点亮记录：两次点击确认，避免误触
+    const clr=document.getElementById('smClear');
+    if(clr) clr.onclick=()=>{
+      if(clr.dataset.arm!=='1'){
+        clr.dataset.arm='1'; clr.textContent='确定清空？再点一次'; clr.classList.add('ok');
+        setTimeout(()=>{ if(clr.dataset.arm==='1'){ clr.dataset.arm='0';
+          clr.textContent='清空点亮记录'; clr.classList.remove('ok'); } },4000);
+        return;
+      }
+      clr.dataset.arm='0'; clr.textContent='清空点亮记录'; clr.classList.remove('ok');
+      LEARNED.clear(); learnWrite(LEARNED);
+      knowledge.forEach((kp,i)=>{ cardGrps[i].userData.learned=false; });
+      syncStarMapBtn();
+    };
+  })();
+
+  /* ---------- 拓扑布局（聚簇） ---------- */
+  function computeTopo(){
+    const perCh={};
+    knowledge.forEach((kp,i)=>{ (perCh[kp.ch]=perCh[kp.ch]||[]).push(i); });
+    Object.keys(perCh).forEach(ch=>{ const list=perCh[ch]; const m=list.length; const cc=clusterCenter[ch];
+      const rr = m>10?11:(m>6?8.5:(m>3?6.5:5));
+      const off = (chapterMeta[ch].part==='p1'?0.3:(chapterMeta[ch].part==='p2'?1.0:0.6));
+      list.forEach((idx,j)=>{ const ang=(j/m)*Math.PI*2 + off;
+        const x=cc.x + Math.cos(ang)*rr; const z=cc.z + Math.sin(ang)*rr; const y=cc.y + Math.sin(ang*2 + j)*2.0;
+        const u=cardGrps[idx].userData;
+        u.topo.set(x,y,z); u.baseY=y; u.moved=false; u.target.copy(u.topo); }); });
+  }
+  computeTopo();
+
+  /* ---------- 关系连线（默认完全隐藏：只有学过的、或被点亮时才浮现，越学越密） ---------- */
+  const edgeLines=[];
+  relIdx.forEach(r=>{ const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const mat=new THREE.LineBasicMaterial({color:0x3a4a8c,transparent:true,opacity:0});
+    const line=new THREE.Line(geo,mat); scene.add(line); edgeLines.push({line:line,ia:r.a,ib:r.b,op:0}); });
+
+  /* 点亮子图的连线用发光细管画（WebGL 里 LineBasicMaterial 的 linewidth 无效，1px 太细看不见） */
+  const hotPool=[];
+  (function(){ const geo=new THREE.CylinderGeometry(0.07,0.07,1,6,1,true);
+    for(let i=0;i<20;i++){ const m=new THREE.MeshBasicMaterial({color:0xffd06a,transparent:true,opacity:0,
+        blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+      const mesh=new THREE.Mesh(geo,m); mesh.visible=false; scene.add(mesh); hotPool.push(mesh); } })();
+
+  function makeLabel(text,x,y,z,px,color){
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=128; const x2=cv.getContext('2d');
+    x2.clearRect(0,0,512,128); x2.font='bold 56px "Microsoft YaHei","PingFang SC",sans-serif';
+    x2.fillStyle=color||'#fff'; x2.textAlign='center'; x2.textBaseline='middle';
+    x2.shadowColor='rgba(0,0,0,0.6)'; x2.shadowBlur=8; x2.fillText(text,256,64);
+    const tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,opacity:0}));
+    sp.scale.set(px/10,px/20,1); sp.position.set(x,y,z); return sp;
+  }
+  function makeNodeLabel(kp){
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=128; const g=cv.getContext('2d');
+    g.clearRect(0,0,512,128);
+    // 标题长时自动缩小字号，避免文字被画布裁掉
+    const L=kp.title.length, fs=L>14?28:(L>11?34:40);
+    g.font='bold '+fs+'px "Microsoft YaHei","PingFang SC",sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+    // 不画底框：只用深色描边托住白字，密集时也不会把星点糊成一块
+    g.lineWidth=7; g.strokeStyle='rgba(4,8,22,0.9)'; g.strokeText(kp.title,256,64);
+    g.fillStyle='#ffffff'; g.fillText(kp.title,256,64);
+    const tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,opacity:0}));
+    sp.scale.set(7.2,1.8,1); return sp;
+  }
+  /* ---------- 点亮的节点才长名字：中心 + 一跳，其余淡出即销毁 ---------- */
+  const labelIdx=new Set();
+  function ensureLabel(i){
+    const u=cardGrps[i].userData;
+    if(u.lbl) return u.lbl;
+    const sp=makeNodeLabel(u.kp); sp.position.set(0,2.6,0); sp.scale.set(6.4,1.6,1);
+    cardGrps[i].add(sp); u.lbl=sp; labelIdx.add(i); return sp;
+  }
+  function updateNodeLabels(){
+    const want=new Set();
+    if(LIT.center>=0){ want.add(LIT.center); LIT.near.forEach(i=>want.add(i)); }
+    // 名字只给最亮的几个（中心 + 3 个近邻），远景不铺字，保持星海干净；完整名单在弹窗的「关联拓扑」里
+    const maxLbl=4;
+    let n=0;
+    const SEQ=[0,1,-1,2,-2,3,-3,4];
+    want.forEach(i=>{ const sp=ensureLabel(i); const c=(i===LIT.center);
+      if(n>=maxLbl){ sp.material.opacity += (0-sp.material.opacity)*0.18; return; }
+      const d=Math.max(1, Math.min(110, cardGrps[i].position.distanceTo(camera.position)));
+      if(d>78){ sp.material.opacity += (0-sp.material.opacity)*0.18; return; }   // 太远就不显示文字
+      const H=window.innerHeight||700;
+      const hh=(c?52:45)*d/H;
+      // 字号与行距都保持屏幕恒定，远近一致、相邻两行差 ~26px，不叠字
+      sp.position.set(0, 34*d/H + SEQ[Math.min(n,SEQ.length-1)]*26*d/H, 0);
+      sp.material.opacity += ((c?1:0.86)-sp.material.opacity)*0.12;
+      sp.scale.set(hh*4,hh,1);
+      n++;
+    });
+    const drop=[];
+    labelIdx.forEach(i=>{
+      if(want.has(i)) return;
+      const sp=cardGrps[i].userData.lbl; if(!sp){ drop.push(i); return; }
+      sp.material.opacity += (0-sp.material.opacity)*0.18;
+      if(sp.material.opacity<0.02){
+        cardGrps[i].remove(sp); if(sp.material.map) sp.material.map.dispose(); sp.material.dispose();
+        cardGrps[i].userData.lbl=null; drop.push(i); }
+    });
+    drop.forEach(i=>labelIdx.delete(i));
+  }
+  function rr(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+    g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+  function wrap(g,text,cx,y,maxW,lh){ const chars=text.split(''); let line=''; const lines=[];
+    for(const ch of chars){ if(g.measureText(line+ch).width>maxW){ lines.push(line); line=ch; } else line+=ch; }
+    lines.push(line); const startY=y-(lines.length-1)*lh/2;
+    lines.forEach((l,i)=>g.fillText(l,cx,startY+i*lh)); }
+
+  function updateFilter(){
+    cardGrps.forEach(g=>{ const on=(currentFilter===null||g.userData.kp.ch===currentFilter);
+      g.userData.dim=!on; });
+  }
+
+  // 交互：整片星云可拖动旋转；轻点星云任一处，浮出离点击点最近的那个知识点
+  const tooltip=document.getElementById('tooltip'); const dom=renderer.domElement;
+  let hovered=null, hoveredIdx=null, dragCandidate=null, downXY=null;
+  const _pv=new THREE.Vector3();
+  dom.style.cursor='grab';
+
+  // 无需点中某颗星：取屏幕上离点击处最近的知识点（手机上一点就有反馈）
+  function nearestKPIdx(cx,cy){
+    const W=window.innerWidth, H=window.innerHeight;
+    let best=-1, bd=1e9;
+    cardGrps.forEach(g=>{ _pv.copy(g.position).project(camera);
+      if(_pv.z>1) return;                                   // 相机背后
+      const sx=(_pv.x*0.5+0.5)*W, sy=(-_pv.y*0.5+0.5)*H;
+      const d=Math.hypot(sx-cx,sy-cy);
+      if(d<bd){ bd=d; best=g.userData.idx; } });
+    // 点在远离星云的纯背景上就不弹，避免误触
+    return bd<=Math.max(150, Math.min(W,H)*0.42) ? best : -1;
+  }
+
+  dom.addEventListener('pointerdown',e=>{ downXY=[e.clientX,e.clientY]; });
+  dom.addEventListener('pointerup',e=>{
+    if(downXY && Math.hypot(e.clientX-downXY[0], e.clientY-downXY[1])<8){
+      const i=nearestKPIdx(e.clientX,e.clientY);
+      if(i>=0) openKP(knowledge[i]);
+    }
+    downXY=null;
+  });
+  dom.addEventListener('pointerleave',()=>{ downXY=null; tooltip.style.display='none'; });
+  dom.addEventListener('pointercancel',()=>{ downXY=null; });
+
+  /* ---------- 开场：穿越星雾飞入 + 宇宙缓慢自转 ---------- */
+  const HOME_POS=new THREE.Vector3(0,7,50), HOME_TARGET=new THREE.Vector3(0,6,0);
+  const AUTO_ROTATE_SPEED=0.22;          // OrbitControls：约 4.5 分钟一圈（极缓慢）
+  const FOG_NEAR=0.0085, FOG_FAR=0.0065;  // 飞入全程星雾由浓转清（起点仍能辨认星群轮廓）
+  let introCam=null, introDone=false, idleTimer=null;
+  function pauseAutoRotate(){ autoRotatePaused=true; clearTimeout(idleTimer); }
+  function resumeAutoRotateLater(ms){ clearTimeout(idleTimer);
+    idleTimer=setTimeout(()=>{ autoRotatePaused=false; }, (ms==null?9000:ms)); }
+  controls.addEventListener('start', pauseAutoRotate);
+  controls.addEventListener('end', ()=>resumeAutoRotateLater(9000));
+
+  // 渲染循环
+  const clock=new THREE.Clock();
+  const _tmpCol=new THREE.Color();
+  const _va=new THREE.Vector3(), _up=new THREE.Vector3(0,1,0);
+  function updateEdges(t){
+    edgeLines.forEach((e,ei)=>{
+      const ua=cardGrps[e.ia].userData, ub=cardGrps[e.ib].userData;
+      // 顶点间距离较远时跳过重算，省掉大量无意义的几何写入
+      const pa=cardGrps[e.ia].position, pb=cardGrps[e.ib].position;
+      e.line.geometry.setFromPoints([pa,pb]); e.line.geometry.attributes.position.needsUpdate=true;
+      let tOp=0, col=0x3a4a8c;
+      if(LIT.edges.has(ei)){                      // 当前点亮子图：金色流动
+        tOp=0.46+0.20*Math.sin(t*2.2+ei*0.7); col=0xffd06a;
+      }else if(ua.learned && ub.learned){          // 两端都学过：淡蓝常亮（越学越密）
+        tOp=LIT.all?0.36:0.28; col=0x8fb0ff;
+      }else if(LIT.all && (ua.learned||ub.learned)){ // 总览：已学引出的虚线暗示
+        tOp=0.09; col=0x6f86c8;
+      }
+      e.op += (tOp-e.op)*0.12;
+      e.line.material.opacity=e.op; e.line.material.color.setHex(col);
+      e.line.visible = e.op>0.004;
+    });
+    // 亮起的连线：发光细管（最多 20 条，够覆盖一跳 + 二跳 + 孤立点的辐条）
+    let k=0;
+    LIT.edges.forEach(ei=>{
+      if(k>=hotPool.length) return;
+      const e=edgeLines[ei]; if(!e) return;
+      drawHot(k++, cardGrps[e.ia], cardGrps[e.ib], t, 0.42);
+    });
+    if(LIT.spokes) LIT.spokes.forEach(p=>{
+      if(k>=hotPool.length) return;
+      drawHot(k++, cardGrps[p[0]], cardGrps[p[1]], t, 0.26);
+    });
+    for(;k<hotPool.length;k++){ const mesh=hotPool[k];
+      if(!mesh.visible) continue;
+      mesh.material.opacity*=0.88;
+      if(mesh.material.opacity<0.02){ mesh.material.opacity=0; mesh.visible=false; }
+    }
+  }
+  function drawHot(i,ga,gb,t,base){
+    const mesh=hotPool[i];
+    _va.copy(gb.position).sub(ga.position); const len=_va.length();
+    if(len<0.01){ mesh.visible=false; return; }
+    mesh.position.copy(ga.position).addScaledVector(_va,0.5);
+    mesh.quaternion.setFromUnitVectors(_up,_va.normalize());
+    mesh.scale.set(1,len,1);
+    mesh.visible=true;
+    mesh.material.opacity=base+0.14*Math.sin(t*2.2+i*0.8);
+  }
+  function updateEdgeLabels(){
+    // 关系标签已移除（保持星云纯净），此函数留空
+  }
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    if(starMat) starMat.uniforms.uTime.value=t;
+    nebGroup.rotation.z += 0.00035;
+    if(starCloud) starCloud.rotation.y += 0.00018;   // 星海缓慢流转（约 10 分钟一圈）
+    const camLocal=scene.worldToLocal(camera.position.clone());
+    cardGrps.forEach(g=>{ const u=g.userData;
+      // 星群极缓慢上下漂浮（约 15 秒一次呼吸），像星云在宇宙中轻轻起伏；被手动拖走的星星不再跟随
+      if(!u.moved && u.baseY!==undefined) u.target.y = u.baseY + Math.sin(t*0.42 + u.twPhase)*0.55;
+      g.position.lerp(u.target,0.08);
+      const dx=camLocal.x-g.position.x, dz=camLocal.z-g.position.z; g.rotation.y=Math.atan2(dx,dz);
+      /* 亮度分级：当前知识点最亮 → 一跳 → 二跳 → 学过的长亮 → 星图总览下的未学暗点 → 平时完全隐藏 */
+      const tw=0.7+0.3*Math.sin(t*1.9 + u.twPhase);
+      let tOp=0, tSc=STAR_BASE_SCALE*0.8, tCol=0xffcf7a;
+      if(u.idx===LIT.center){        tOp=1;      tSc=STAR_BASE_SCALE*(1.85+0.22*tw); tCol=0xfff0c4; }
+      else if(LIT.near.has(u.idx)){  tOp=0.95;   tSc=STAR_BASE_SCALE*(1.22+0.12*tw); tCol=0xdfe9ff; }
+      else if(LIT.far.has(u.idx)){   tOp=0.52;   tSc=STAR_BASE_SCALE*0.95;           tCol=0x9fb8e8; }
+      else if(u.learned){            tOp=(LIT.all?0.62:0.38)*(0.78+0.22*tw);
+                                     tSc=STAR_BASE_SCALE*(LIT.all?0.95:0.78);        tCol=0xffcf7a; }
+      else if(LIT.all){              tOp=0.075;  tSc=STAR_BASE_SCALE*0.55;           tCol=0x8fa8ff; }
+      if(u.dim) tOp*=0.12;
+      u.op += (tOp-u.op)*0.10;
+      u.sc += (tSc-u.sc)*0.12;
+      u.star.scale.setScalar(u.sc);
+      u.star.material.opacity=u.op;
+      u.star.material.color.lerp(_tmpCol.setHex(tCol), 0.10);
+      u.star.visible = u.op>0.012;
+    });
+    if(fly){ controls.target.lerp(fly.target,0.09); camera.position.lerp(fly.cam,0.09);
+      if(controls.target.distanceTo(fly.target)<0.6 && camera.position.distanceTo(fly.cam)<0.6) fly=null; }
+    // 开场推入：自远方星海缓缓贴近，星雾由浓转清（easeOutCubic）
+    if(introCam){
+      controls.enabled=false;          // 飞入期间不接管镜头，避免与用户操作互相拉扯
+      const p=Math.min(1,(performance.now()-introCam.t0)/introCam.dur);
+      const e=1-Math.pow(1-p,3);
+      camera.position.lerpVectors(introCam.fromP,HOME_POS,e);
+      controls.target.lerpVectors(introCam.fromT,HOME_TARGET,e);
+      if(scene.fog) scene.fog.density=FOG_NEAR+(FOG_FAR-FOG_NEAR)*e;
+      if(p>=1){ introCam=null; introDone=true; controls.enabled=true; resumeAutoRotateLater(800); }
+    }
+    // 无人操作时整片星云极缓慢环绕 —— 宇宙在不停地运动
+    controls.autoRotateSpeed=AUTO_ROTATE_SPEED;
+    controls.autoRotate = !autoRotatePaused && !fly && !introCam && introDone && !dragCandidate;
+    updateEdges(t); updateFilter(); updateNodeLabels();
+    controls.update(); renderer.render(scene,camera);
+  }
+  window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight); });
+
+  updateFilter(); animate();
+
+  /* ====================== 降级：HTML 卡片栅格 ====================== */
+  function startFallback(){
+    document.body.classList.add('no3d');
+    document.getElementById('err').style.display='none';
+    const smb=document.getElementById('btnStarMap'); if(smb) smb.style.display='none';  // 无 3D 时没有星图可看
+    const fb=document.getElementById('fallback'); fb.style.display='block';
+    let h='<p style="color:#aeb2d6">3D 资源未能加载，已切换为图文卡片模式（功能完整，含颜色标注、发音与每知识点自测）。按"编—章"两级组织。</p>';
+    partOrder.forEach(pid=>{ const p=partMeta[pid];
+      h+='<h2 style="color:'+p.color+'">'+p.title+'</h2>';
+      chapterOrder.filter(ch=>chapterMeta[ch].part===pid).forEach(ch=>{ const c=chapterMeta[ch];
+        h+='<h3 style="color:'+c.color+';margin:14px 0 8px">'+c.label+' · '+c.sub+'</h3><div class="grid">';
+        knowledge.filter(k=>k.ch===ch).forEach(k=>{ h+='<div class="fcard" style="--c:'+c.color+'" data-kp="'+knowledge.indexOf(k)+'">'+k.title+'<small>点击查看·讲解·自测·朗读</small></div>'; });
+        h+='</div>';
+      });
+    });
+    fb.innerHTML=h;
+    fb.querySelectorAll('.fcard').forEach(el=>el.onclick=()=>openKP(knowledge[+el.dataset.kp]));
+    // 无 3D 时按钮仍可进入（纯淡出）
+    const eb=document.getElementById('enterBtn');
+    if(eb) eb.onclick=()=>{ const intro=document.getElementById('intro'); if(!intro) return;
+      intro.style.transition='opacity .9s ease'; intro.style.opacity='0'; intro.style.pointerEvents='none';
+      setTimeout(()=>{ intro.style.display='none'; },940); };
+  }
+
+  /* ====================== 开场 ====================== */
+  (function(){ const el=document.getElementById('kpCount'); if(el) el.textContent=knowledge.length; })();
+  document.getElementById('enterBtn').onclick=()=>{ const intro=document.getElementById('intro');
+    if(!intro || intro.dataset.entered) return; intro.dataset.entered='1';
+    intro.style.transition='opacity 1.15s ease, transform 1.15s ease';
+    intro.style.opacity='0'; intro.style.transform='scale(1.08)'; intro.style.pointerEvents='none';
+    setTimeout(()=>{ intro.style.display='none'; },1180);
+    // 镜头自远方星海缓缓推进到观测位（约 4.8 秒）：星雾由浓转清，星群渐渐浮现
+    const fromP=new THREE.Vector3(0,34,142), fromT=new THREE.Vector3(0,17,0);
+    camera.position.copy(fromP); controls.target.copy(fromT); controls.enabled=false;
+    if(scene.fog) scene.fog.density=FOG_NEAR;
+    introCam={t0:performance.now(), dur:4800, fromP:fromP, fromT:fromT};
+  };
+
+  window.__course={openChapter,openKP,computeTopo};
+})();
+</script>
+<!-- ===================== 真题练习模块（15043） ===================== -->
+<style>
+  /* 练习层：只压暗一点点，让背后的星河保持锐利明亮；内容容器自己做玻璃 */
+  #exam{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
+    background:
+      radial-gradient(58% 44% at 15% 5%, rgba(91,140,255,0.20), rgba(91,140,255,0) 72%),
+      radial-gradient(56% 44% at 87% 86%, rgba(233,185,73,0.13), rgba(233,185,73,0) 72%),
+      radial-gradient(140% 110% at 50% 44%, rgba(4,7,22,0.20) 0%, rgba(4,7,22,0.30) 44%, rgba(2,4,14,0.62) 100%);
+    -webkit-backdrop-filter:saturate(1.55) brightness(1.16) contrast(1.06);
+    backdrop-filter:saturate(1.55) brightness(1.16) contrast(1.06);}
+  #exam.open{display:flex;}
+  /* 练习层打开时，星图自身的顶栏/提示条退到背景里，不打扰答题 */
+  body.exam-open #topbar, body.exam-open #hint{opacity:0;pointer-events:none;transition:opacity .3s;}
+  body.exam-open #tooltip{display:none !important;}
+  .ex-top{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.10);background:rgba(6,9,24,0.78);flex-wrap:wrap;
+    -webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);}
+  .ex-back{width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);
+    background:rgba(14,19,42,0.55);color:#fff;font-size:16px;cursor:pointer;flex:none;}
+  .ex-back:hover{background:rgba(255,255,255,0.14);}
+  .ex-ttl{font-weight:700;font-size:15px;letter-spacing:.3px;
+    background:linear-gradient(90deg,#e9b949,#e23b3b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .ex-ttl small{display:block;font-size:11px;font-weight:400;color:#8f97bb;letter-spacing:0;
+    -webkit-text-fill-color:#8f97bb;margin-top:2px;}
+  .ex-tools{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;}
+  .ex-tool{border:1px solid rgba(255,255,255,0.16);background:rgba(14,19,42,0.55);color:#dfe3f7;
+    padding:6px 11px;border-radius:16px;font-size:12.5px;cursor:pointer;transition:.18s;}
+  .ex-tool:hover{background:rgba(255,255,255,0.13);}
+  .ex-tool b{color:#e9b949;font-weight:700;margin-left:2px;}
+  .ex-tool.on{border-color:rgba(233,185,73,0.65);background:rgba(233,185,73,0.16);}
+
+  .ex-body{flex:1;min-height:0;overflow-y:auto;padding:16px 14px 46px;-webkit-overflow-scrolling:touch;}
+  .ex-inner{max-width:860px;margin:0 auto;}
+
+  /* 主页 */
+  .ex-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .ex-tab{flex:1;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
+    background:rgba(11,16,38,0.70);color:#cfd4ea;font-size:14.5px;cursor:pointer;transition:.18s;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+  .ex-tab.on{border-color:rgba(233,185,73,0.75);background:linear-gradient(180deg,rgba(233,185,73,0.20),rgba(233,185,73,0.06));
+    color:#fff;box-shadow:0 0 18px rgba(233,185,73,0.18) inset;}
+  .ex-note{font-size:13px;color:#9aa3c7;line-height:1.7;margin:0 0 14px;}
+  .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;}
+  .ex-ses{text-align:left;padding:13px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.13);
+    background:rgba(11,16,38,0.76);color:#eef1ff;cursor:pointer;transition:.18s;
+    box-shadow:0 10px 26px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.06);}
+  .ex-ses:hover{border-color:rgba(91,140,255,0.7);background:rgba(91,140,255,0.12);transform:translateY(-1px);}
+  .ex-ses b{display:block;font-size:15px;margin-bottom:4px;}
+  .ex-ses span{font-size:11.5px;color:#8f97bb;}
+  .ex-ses i{display:block;font-style:normal;font-size:11.5px;color:#e9b949;margin-top:5px;}
+
+  .ex-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .ex-chip{padding:8px 14px;border-radius:18px;border:1px solid rgba(255,255,255,0.15);
+    background:rgba(11,16,38,0.70);color:#cfd4ea;font-size:13px;cursor:pointer;transition:.16s;}
+  .ex-chip.on{border-color:rgba(233,185,73,0.8);background:rgba(233,185,73,0.18);color:#fff;}
+  .ex-chip small{color:#8f97bb;font-size:11px;}
+
+  .ex-btn{display:inline-block;padding:12px 22px;border-radius:14px;border:1px solid rgba(233,185,73,0.55);
+    background:linear-gradient(90deg,rgba(233,185,73,0.9),rgba(226,120,59,0.9));color:#20180a;
+    font-size:14.5px;font-weight:700;cursor:pointer;transition:.18s;}
+  .ex-btn:hover{filter:brightness(1.08);}
+  .ex-btn.ghost{background:rgba(11,16,38,0.62);border-color:rgba(255,255,255,0.2);color:#e6e9fb;font-weight:400;}
+  .ex-btn.ghost:hover{background:rgba(255,255,255,0.13);}
+  .ex-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* 答题进度条 */
+  .ex-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:12.5px;color:#c3cbe6;flex-wrap:wrap;
+    text-shadow:0 1px 4px rgba(0,0,0,0.62);}
+  .ex-tag{padding:3px 10px;border-radius:12px;background:rgba(91,140,255,0.18);border:1px solid rgba(91,140,255,0.45);color:#bcd0ff;}
+  .ex-tag.s{background:rgba(154,107,255,0.18);border-color:rgba(154,107,255,0.45);color:#dbc9ff;}
+  .ex-pos{color:#cfd4ea;}
+  .ex-star{margin-left:auto;background:none;border:none;font-size:19px;cursor:pointer;line-height:1;padding:2px 4px;color:#7d86ad;}
+  .ex-star.on{color:#e9b949;text-shadow:0 0 12px rgba(233,185,73,0.7);}
+  .ex-sub{margin-left:auto;display:flex;gap:8px;align-items:center;}
+
+  /* 题卡 */
+  .ex-card{background:rgba(10,14,36,0.80);border:1px solid rgba(255,255,255,0.11);
+    border-radius:16px;padding:16px 16px 8px;
+    box-shadow:0 22px 54px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.07);
+    -webkit-backdrop-filter:blur(16px) saturate(1.15);backdrop-filter:blur(16px) saturate(1.15);}
+  .ex-stem{font-size:16px;line-height:1.78;margin:0 0 14px;white-space:pre-wrap;color:#f2f4ff;}
+  .ex-opt{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;border-radius:12px;
+    border:1px solid rgba(255,255,255,0.14);background:rgba(16,21,46,0.76);color:#e7eaf8;
+    font-size:14.5px;line-height:1.65;margin-bottom:9px;cursor:pointer;transition:.15s;}
+  .ex-opt:hover{border-color:rgba(233,185,73,0.55);background:rgba(233,185,73,0.07);}
+  .ex-opt .k{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,0.32);
+    display:grid;place-items:center;font-size:12px;color:#cfd4ea;}
+  .ex-opt.sel{border-color:rgba(233,185,73,0.9);background:rgba(233,185,73,0.16);}
+  .ex-opt.sel .k{background:#e9b949;border-color:#e9b949;color:#20180a;font-weight:700;}
+  .ex-opt.ok{border-color:#35c46a;background:rgba(53,196,106,0.15);}
+  .ex-opt.ok .k{background:#35c46a;border-color:#35c46a;color:#062;font-weight:700;}
+  .ex-opt.no{border-color:#e23b3b;background:rgba(226,59,59,0.14);}
+  .ex-opt.no .k{background:#e23b3b;border-color:#e23b3b;color:#fff;font-weight:700;}
+  .ex-opt.lock{cursor:default;}
+  .ex-ta{width:100%;min-height:120px;border-radius:12px;border:1px solid rgba(255,255,255,0.16);
+    background:rgba(7,10,26,0.78);color:#f2f4ff;padding:12px 13px;font-size:14.5px;line-height:1.75;
+    resize:vertical;font-family:inherit;outline:none;}
+  .ex-ta:focus{border-color:rgba(91,140,255,0.7);}
+  .ex-hintline{font-size:12px;color:#8f97bb;margin:8px 0 12px;}
+
+  /* 解析 / 反馈 */
+  .ex-fb{margin-top:12px;border-radius:14px;padding:14px 15px;font-size:14px;line-height:1.8;
+    border:1px solid rgba(255,255,255,0.10);background:rgba(11,16,38,0.72);}
+  .ex-fb.good{border-color:rgba(53,196,106,0.45);background:rgba(53,196,106,0.09);}
+  .ex-fb.bad{border-color:rgba(226,59,59,0.45);background:rgba(226,59,59,0.09);}
+  .ex-fb h4{margin:0 0 8px;font-size:14px;color:#ffd977;letter-spacing:.3px;}
+  .ex-fb.good h4{color:#8ff0b4;} .ex-fb.bad h4{color:#ff9a9a;}
+  .ex-fb pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px;line-height:1.85;color:#e8ebfa;}
+  .ex-fb .lbl{color:#9aa3c7;font-size:12.5px;margin:12px 0 4px;display:block;}
+  .ex-fb .refbox{background:rgba(91,140,255,0.10);border:1px solid rgba(91,140,255,0.28);
+    border-radius:10px;padding:11px 12px;margin-top:4px;}
+  .ex-fb .expbox{background:rgba(233,185,73,0.08);border:1px solid rgba(233,185,73,0.25);
+    border-radius:10px;padding:11px 12px;margin-top:10px;}
+  .ex-mine{border:1px dashed rgba(255,255,255,0.22);border-radius:12px;padding:11px 13px;
+    background:rgba(17,23,50,0.55);font-size:13.5px;line-height:1.8;color:#cfd4ea;}
+  .ex-mine b{display:block;font-size:12.5px;color:#9aa3c7;margin-bottom:5px;font-weight:400;}
+  .ex-mine pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px;color:#e3e7f6;}
+  .ex-self{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .ex-self button{padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.06);color:#e7eaf8;font-size:13px;cursor:pointer;}
+  .ex-self button:hover{background:rgba(255,255,255,0.14);}
+
+  /* 底部操作 */
+  .ex-acts{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap;}
+  .ex-acts .sp{margin-left:auto;}
+
+  /* 答题卡 */
+  .ex-sheet{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(255,255,255,0.12);}
+  .ex-sq{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.16);
+    background:rgba(14,19,42,0.74);color:#c6cde8;font-size:12px;cursor:pointer;}
+  .ex-sq.done{background:rgba(91,140,255,0.28);border-color:rgba(91,140,255,0.7);color:#fff;}
+  .ex-sq.ok{background:rgba(53,196,106,0.28);border-color:rgba(53,196,106,0.75);color:#fff;}
+  .ex-sq.bad{background:rgba(226,59,59,0.28);border-color:rgba(226,59,59,0.75);color:#fff;}
+  .ex-sq.cur{outline:2px solid #e9b949;outline-offset:1px;}
+
+  /* 成绩 */
+  .ex-score{display:flex;align-items:baseline;gap:8px;margin:6px 0 4px;}
+  .ex-score b{font-size:46px;line-height:1;color:#e9b949;font-family:Georgia,serif;}
+  .ex-score span{color:#8f97bb;font-size:14px;}
+  .ex-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#a8b0d0;margin-bottom:6px;}
+  .ex-meta b{color:#e7eaf8;}
+  .ex-rlist{margin-top:14px;display:flex;flex-direction:column;gap:9px;}
+  .ex-ritem{border:1px solid rgba(255,255,255,0.10);border-radius:12px;background:rgba(11,16,38,0.80);overflow:hidden;}
+  .ex-rh{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;font-size:13.5px;color:#e7eaf8;}
+  .ex-rh .badge{flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;}
+  .ex-rh .t{flex:1;overflow:hidden;display:none;line-height:1.6;color:#c9d0ea;}
+  .ex-ritem:not(.open) .ex-rh .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ex-rh .sc{color:#8f97bb;font-size:12px;}
+  .ex-rh .rn{flex:none;min-width:23px;height:23px;padding:0 5px;border-radius:7px;display:grid;place-items:center;
+    font-size:11.5px;color:#d3d9f2;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);}
+  .ex-rh .arw{flex:none;font-size:10px;color:#8f97bb;transition:transform .2s;}
+  .ex-ritem.open .ex-rh .arw{transform:rotate(180deg);}
+  .ex-rb{padding:0 13px 14px;display:none;font-size:13.5px;line-height:1.8;color:#dfe3f7;}
+  .ex-ritem.open .ex-rb{display:block;}
+  /* 逐题解析：题干 / 选项 / 参考答案 / 详解 一一对应 */
+  .ex-qmeta{font-size:11.5px;color:#828bb0;letter-spacing:.3px;margin-bottom:7px;}
+  .ex-qfull{font-size:14.5px;line-height:1.8;color:#f2f4ff;white-space:pre-wrap;margin-bottom:11px;
+    padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,0.10);}
+  .ex-rb .lbl{color:#9aa3c7;font-size:12.5px;margin:13px 0 4px;display:block;}
+  .ex-rb .refbox{background:rgba(91,140,255,0.10);border:1px solid rgba(91,140,255,0.28);
+    border-radius:10px;padding:11px 12px;}
+  .ex-rb .refbox pre,.ex-rb .expbox pre{margin:0;white-space:pre-wrap;word-break:break-word;
+    font-family:inherit;font-size:13.5px;line-height:1.85;color:#e8ebfa;}
+  .ex-rb .expbox{background:rgba(233,185,73,0.08);border:1px solid rgba(233,185,73,0.25);
+    border-radius:10px;padding:11px 12px;}
+  .ex-rb .expbox.dim{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12);}
+  .ex-rb .expbox.dim pre{color:#a8b0d0;}
+  .ex-rb .ex-opt{font-size:13.5px;padding:10px 12px;margin-bottom:7px;}
+  .ex-ansline{margin-top:9px;font-size:13px;color:#cfd6f0;line-height:1.8;}
+  .ex-ansline .ok{color:#8ff0b4;} .ex-ansline .no{color:#ff9a9a;} .ex-ansline b{color:#8ff0b4;}
+  .ex-cover{display:inline-block;margin-left:7px;font-size:11.5px;padding:1px 7px;border-radius:8px;
+    background:rgba(53,196,106,0.18);border:1px solid rgba(53,196,106,0.5);color:#8ff0b4;}
+  .ex-cover.no{background:rgba(226,59,59,0.18);border-color:rgba(226,59,59,0.5);color:#ff9a9a;}
+  .ex-rtools{display:flex;align-items:center;gap:8px;margin:14px 0 10px;flex-wrap:wrap;}
+  .ex-rtools>.sp{text-shadow:none;}
+  .ex-rtools .sp{margin-left:auto;}
+  .ex-mini{padding:6px 12px;border-radius:10px;font-size:12.5px;cursor:pointer;font-family:inherit;
+    border:1px solid rgba(255,255,255,0.16);background:rgba(14,19,42,0.62);color:#c8cfea;transition:.15s;}
+  .ex-mini:hover{background:rgba(255,255,255,0.12);color:#fff;}
+  .ex-mini.on{background:rgba(226,59,59,0.20);border-color:rgba(226,59,59,0.55);color:#ffb3b3;}
+
+  /* ===================== 线索：详解下的入口 + 右侧知识点卡片 ===================== */
+  .ex-clue{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;margin-top:11px;
+    padding:10px 12px;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;
+    border:1px dashed rgba(233,185,73,0.45);color:#eadfc4;
+    background:linear-gradient(100deg,rgba(233,185,73,0.14),rgba(233,185,73,0.035) 62%,rgba(91,140,255,0.05));
+    transition:border-color .18s,background .18s,box-shadow .18s,transform .18s;}
+  .ex-clue:hover{border-color:rgba(233,185,73,0.85);transform:translateY(-1px);
+    background:linear-gradient(100deg,rgba(233,185,73,0.22),rgba(233,185,73,0.06) 62%,rgba(91,140,255,0.07));
+    box-shadow:0 8px 22px rgba(233,185,73,0.12);}
+  .ex-clue .ic{flex:none;width:27px;height:27px;border-radius:8px;display:grid;place-items:center;font-size:14px;
+    background:rgba(233,185,73,0.16);border:1px solid rgba(233,185,73,0.38);}
+  .ex-clue .tx{flex:1;min-width:0;font-size:13px;line-height:1.6;color:#cfd6f0;}
+  .ex-clue .tx b{color:#ffd977;font-weight:400;}
+  .ex-clue .tx em{font-style:normal;color:#fff;font-weight:600;}
+  .ex-clue .tx small{display:block;font-size:11.5px;color:#8f97bb;margin-top:1px;}
+  .ex-clue .arw{flex:none;font-size:12px;color:#e9b949;}
+
+  #exClue{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);z-index:80;
+    display:flex;pointer-events:none;}
+  #exClue.open{pointer-events:auto;}
+  .exc-card{position:relative;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;
+    border-radius:18px 0 0 18px;
+    background:linear-gradient(180deg,rgba(19,25,54,0.985),rgba(7,11,28,0.99));
+    border:1px solid rgba(233,185,73,0.26);border-right:none;
+    box-shadow:-28px 0 70px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.06);
+    transform:translateX(104%);transition:transform .34s cubic-bezier(.24,.9,.28,1);}
+  #exClue.open .exc-card{transform:translateX(0);}
+  .exc-hd{flex:none;display:flex;align-items:center;gap:9px;padding:13px 14px 11px;
+    border-bottom:1px solid rgba(255,255,255,0.08);}
+  .exc-tag{padding:3px 10px;border-radius:11px;font-size:11.5px;letter-spacing:.4px;
+    border:1px solid rgba(233,185,73,0.45);background:rgba(233,185,73,0.14);color:#e9b949;}
+  .exc-hd .cnt{font-size:11.5px;color:#8f97bb;}
+  .exc-x{margin-left:auto;flex:none;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:17px;line-height:1;
+    border:1px solid rgba(255,255,255,0.16);background:rgba(14,19,42,0.6);color:#cfd6f0;}
+  .exc-x:hover{background:rgba(255,255,255,0.14);color:#fff;}
+  .exc-bd{flex:1;min-height:0;overflow-y:auto;padding:15px 15px 8px;-webkit-overflow-scrolling:touch;}
+  .exc-title{margin:0 0 5px;font-size:18px;line-height:1.5;color:#fff;font-weight:600;letter-spacing:.2px;}
+  .exc-sub{margin:0 0 14px;font-size:11.5px;color:#8f97bb;letter-spacing:.3px;}
+  .exc-sec{margin-bottom:16px;}
+  .exc-lbl{font-size:12.5px;color:#a9b2d2;margin-bottom:7px;letter-spacing:.3px;}
+  .exc-txt{font-size:14px;line-height:1.95;color:#dfe3f7;white-space:pre-wrap;}
+  .exc-chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .exc-chip{padding:7px 11px;border-radius:11px;cursor:pointer;font-family:inherit;font-size:12.5px;
+    border:1px solid rgba(255,255,255,0.16);background:rgba(14,19,42,0.6);color:#c8cfea;
+    transition:.15s;text-align:left;line-height:1.45;}
+  .exc-chip:hover{border-color:rgba(91,140,255,0.7);background:rgba(91,140,255,0.14);color:#fff;}
+  .exc-chip.alt{border-color:rgba(233,185,73,0.42);background:rgba(233,185,73,0.10);color:#f2dda6;}
+  .exc-chip small{display:block;font-size:10.5px;color:#8f97bb;margin-top:2px;}
+  .exc-q{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:9px 11px;
+    margin-bottom:6px;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;
+    border:1px solid rgba(255,255,255,0.10);background:rgba(14,19,42,0.5);color:#c8cfea;font-size:12.5px;
+    line-height:1.5;transition:.15s;}
+  .exc-q:hover{border-color:rgba(91,140,255,0.6);background:rgba(91,140,255,0.12);color:#fff;}
+  .exc-q .n{flex:none;font-size:11px;color:#8f97bb;}
+  .exc-q .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .exc-q i{flex:none;font-style:normal;font-size:10px;color:#8f97bb;}
+  .exc-ft{flex:none;display:flex;gap:8px;padding:11px 14px 13px;border-top:1px solid rgba(255,255,255,0.08);
+    background:rgba(6,9,24,0.55);}
+  .exc-btn{flex:1;padding:11px 10px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13px;
+    border:1px solid rgba(233,185,73,0.55);color:#20180a;font-weight:700;
+    background:linear-gradient(90deg,rgba(233,185,73,0.92),rgba(226,120,59,0.92));transition:.16s;}
+  .exc-btn:hover{filter:brightness(1.08);}
+  .exc-btn.ghost{background:rgba(11,16,38,0.62);border-color:rgba(255,255,255,0.2);color:#e6e9fb;font-weight:400;}
+  .exc-btn.ghost:hover{background:rgba(255,255,255,0.13);}
+  .exc-empty{font-size:12.5px;color:#8f97bb;line-height:1.9;}
+  /* 宽屏：卡片打开时把整个试卷面板左移（顶栏也一起让位），既不被遮挡，右侧滚动条也仍可见 */
+  @media (min-width:880px){
+    #exBody,.ex-top{transition:margin-right .34s cubic-bezier(.24,.9,.28,1);}
+    body.clue-open #exBody,body.clue-open .ex-top{margin-right:400px;}
+  }
+  @media (min-width:880px) and (max-width:1150px){
+    #exClue{width:340px;}
+    body.clue-open #exBody,body.clue-open .ex-top{margin-right:340px;}
+  }
+  /* 从卡片跳回本卷某题时的闪烁定位 */
+  .ex-ritem.flash{animation:exFlash 1.5s ease both;}
+  @keyframes exFlash{0%,100%{box-shadow:0 0 0 rgba(233,185,73,0);border-color:rgba(255,255,255,0.10);}
+    18%,62%{box-shadow:0 0 0 3px rgba(233,185,73,0.35);border-color:rgba(233,185,73,0.85);}}
+
+  /* 居中确认弹窗（替代浏览器原生 confirm） */
+  #exModal{position:fixed;inset:0;z-index:90;display:none;}
+  #exModal.open{display:block;}
+  .exm-back{position:absolute;inset:0;background:rgba(2,5,16,0.66);
+    -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:exmFade .18s ease both;}
+  .exm-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(430px,90vw);box-sizing:border-box;
+    padding:26px 24px 20px;border-radius:20px;text-align:center;
+    background:linear-gradient(180deg,rgba(28,36,70,0.985),rgba(11,16,36,0.985));
+    border:1px solid rgba(233,185,73,0.32);
+    box-shadow:0 26px 72px rgba(0,0,0,0.66),0 0 70px rgba(233,185,73,0.10),0 1px 0 rgba(255,255,255,0.06) inset;
+    animation:exmPop .28s cubic-bezier(.2,.9,.3,1.25) both;}
+  @keyframes exmFade{from{opacity:0}to{opacity:1}}
+  @keyframes exmPop{from{opacity:0;transform:translate(-50%,-46%) scale(.93)}
+    to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  .exm-ico{width:56px;height:56px;margin:0 auto 15px;border-radius:50%;display:grid;place-items:center;
+    font-size:25px;line-height:1;background:radial-gradient(circle at 50% 32%,rgba(233,185,73,0.30),rgba(233,185,73,0.05));
+    border:1px solid rgba(233,185,73,0.44);box-shadow:0 0 28px rgba(233,185,73,0.24);}
+  .exm-card h3{margin:0 0 10px;font-size:17.5px;color:#f4f6ff;font-weight:600;letter-spacing:.4px;}
+  .exm-card p{margin:0;font-size:13.5px;line-height:1.95;color:#a9b2d2;}
+  .exm-card p b{color:#e9b949;font-weight:600;}
+  .exm-note{margin-top:13px;padding:10px 12px;border-radius:11px;font-size:12.5px;line-height:1.8;
+    color:#93a0c8;background:rgba(91,140,255,0.08);border:1px solid rgba(91,140,255,0.20);text-align:left;}
+  .exm-act{display:flex;gap:10px;margin-top:20px;}
+  .exm-act button{flex:1;padding:12px 10px;border-radius:12px;font-size:14px;cursor:pointer;font-family:inherit;
+    border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#dfe4f7;transition:.16s;}
+  .exm-act button:hover{background:rgba(255,255,255,0.13);}
+  .exm-act button:focus-visible,#exam button:focus-visible{outline:2px solid rgba(233,185,73,0.70);
+    outline-offset:2px;}
+  .exm-act .main{background:linear-gradient(180deg,#f0c75e,#d9a63a);border-color:#e9b949;
+    color:#241a05;font-weight:700;}
+  .exm-act .main:hover{filter:brightness(1.07);}
+  .exm-act .danger{background:linear-gradient(180deg,#e2564e,#c33a33);border-color:#e2564e;color:#fff;font-weight:700;}
+
+  /* 列表（错题/收藏/最近） */
+  .ex-li{display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:12px;cursor:pointer;
+    border:1px solid rgba(255,255,255,0.09);background:rgba(11,16,38,0.76);margin-bottom:8px;transition:.15s;}
+  .ex-li:hover{border-color:rgba(91,140,255,0.55);background:rgba(91,140,255,0.10);}
+  .ex-li .n{flex:none;font-size:11.5px;color:#8f97bb;min-width:52px;}
+  .ex-li .t{flex:1;font-size:13.5px;line-height:1.55;color:#e7eaf8;overflow:hidden;text-overflow:ellipsis;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ex-empty{color:#8f97bb;font-size:13.5px;line-height:1.9;padding:26px 4px;text-align:center;}
+
+  /* 3D 未能加载（图文卡片模式）时，练习层必须不透明，否则背后卡片会透出来 */
+  body.no3d #exam{background:rgba(4,7,20,0.965);-webkit-backdrop-filter:none;backdrop-filter:none;}
+  body.no3d.theme-day #exam{background:#f2f5fb;}
+
+  /* 成绩页徽标 / 占位 / 自评标签（改为 class，便于昼夜两套配色） */
+  .ex-rh .badge.ok{background:rgba(53,196,106,0.28);color:#8ff0b4;}
+  .ex-rh .badge.no{background:rgba(226,59,59,0.28);color:#ff9a9a;}
+  .ex-blank{color:#8f97bb;}
+  .ex-selflbl{color:#9aa3c7;font-size:12.5px;align-self:center;}
+
+  /* ===================== 白天模式：素净纸感 ===================== */
+  body.theme-day #exam{
+    background:linear-gradient(180deg,#f8fafe 0%,#f1f4fb 46%,#e9eef7 100%);
+    -webkit-backdrop-filter:none;backdrop-filter:none;}
+  body.theme-day .ex-top{background:rgba(255,255,255,0.95);border-bottom-color:#e4e9f2;
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    box-shadow:0 1px 12px rgba(23,38,66,0.05);}
+  body.theme-day .ex-back{border-color:#dfe5f0;background:#fff;color:#3b465e;}
+  body.theme-day .ex-back:hover{background:#f2f5fb;}
+  body.theme-day .ex-ttl{background:linear-gradient(90deg,#a97c12,#b8452e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  body.theme-day .ex-ttl small{color:#8b95ab;-webkit-text-fill-color:#8b95ab;}
+  body.theme-day .ex-tool{border-color:#dfe5f0;background:#fff;color:#46516a;}
+  body.theme-day .ex-tool:hover{background:#f2f5fb;}
+  body.theme-day .ex-tool b{color:#a97c12;}
+  body.theme-day .ex-tool.on{border-color:#e0b862;background:#fdf5e2;color:#8a6410;}
+
+  body.theme-day .ex-tab{border-color:#e4e9f2;background:#fff;color:#5a647c;
+    -webkit-backdrop-filter:none;backdrop-filter:none;}
+  body.theme-day .ex-tab.on{border-color:#dcb262;color:#8a6410;
+    background:linear-gradient(180deg,#fff8e7,#fffdf8);box-shadow:0 0 0 3px rgba(216,161,44,.08);}
+  body.theme-day .ex-note,
+  body.theme-day .ex-hintline,
+  body.theme-day .ex-empty{color:#75809a;}
+  body.theme-day .ex-ses{border-color:#e4e9f2;background:#fff;color:#26304a;
+    box-shadow:0 2px 10px rgba(23,38,66,.05);}
+  body.theme-day .ex-ses:hover{border-color:#aac4f4;background:#f8fbff;}
+  body.theme-day .ex-ses span{color:#8b95ab;}
+  body.theme-day .ex-ses i{color:#a97c12;}
+  body.theme-day .ex-chip{border-color:#e0e5ef;background:#fff;color:#5a647c;}
+  body.theme-day .ex-chip.on{border-color:#dcb262;background:#fdf5e2;color:#8a6410;}
+  body.theme-day .ex-chip small{color:#8b95ab;}
+  body.theme-day .ex-btn{background:linear-gradient(90deg,#eab949,#e2893c);
+    border-color:#d9a94f;color:#2a1c05;}
+  body.theme-day .ex-btn.ghost{background:#fff;border-color:#dfe5f0;color:#46516a;}
+
+  body.theme-day .ex-bar{color:#75809a;}
+  body.theme-day .ex-tag{background:#eaf1ff;border-color:#c7dafa;color:#2c5cc5;}
+  body.theme-day .ex-tag.s{background:#f1eaff;border-color:#d8c7fa;color:#5b3ec9;}
+  body.theme-day .ex-pos{color:#46516a;}
+  body.theme-day .ex-star{color:#b8c1d2;}
+  body.theme-day .ex-star.on{color:#d8a12c;text-shadow:none;}
+
+  body.theme-day .ex-card{background:#fff;border-color:#e5e9f2;
+    box-shadow:0 2px 14px rgba(23,38,66,.06);
+    -webkit-backdrop-filter:none;backdrop-filter:none;}
+  body.theme-day .ex-stem{color:#1f2a3d;}
+  body.theme-day .ex-opt{border-color:#e0e5ef;background:#fff;color:#28324a;}
+  body.theme-day .ex-opt:hover{border-color:#e3c37c;background:#fffdf7;}
+  body.theme-day .ex-opt .k{border-color:#cfd6e4;color:#6b7690;}
+  body.theme-day .ex-opt.sel{border-color:#d8a12c;background:#fff8e7;}
+  body.theme-day .ex-opt.sel .k{background:#d8a12c;border-color:#d8a12c;color:#fff;}
+  body.theme-day .ex-opt.ok{border-color:#43b471;background:#eefaf2;}
+  body.theme-day .ex-opt.ok .k{background:#43b471;border-color:#43b471;color:#fff;}
+  body.theme-day .ex-opt.no{border-color:#e0685f;background:#fdf0ef;}
+  body.theme-day .ex-opt.no .k{background:#e0685f;border-color:#e0685f;color:#fff;}
+  body.theme-day .ex-ta{border-color:#dde3ee;background:#fff;color:#28324a;}
+
+  body.theme-day .ex-fb{border-color:#e4e9f2;background:#fff;color:#28324a;}
+  body.theme-day .ex-fb.good{border-color:#b7e3c7;background:#f4fbf7;}
+  body.theme-day .ex-fb.bad{border-color:#f3c3bf;background:#fdf5f4;}
+  body.theme-day .ex-fb h4{color:#a97c12;}
+  body.theme-day .ex-fb.good h4{color:#1c7a44;}
+  body.theme-day .ex-fb.bad h4{color:#ba332c;}
+  body.theme-day .ex-fb pre{color:#28324a;}
+  body.theme-day .ex-fb .lbl{color:#7b8599;}
+  body.theme-day .ex-fb .refbox{background:#f2f6ff;border-color:#d7e3f9;}
+  body.theme-day .ex-fb .expbox{background:#fffaf0;border-color:#f1e0b8;}
+  body.theme-day .ex-mine{background:#f8fafd;border-color:#dfe4ee;color:#46516a;}
+  body.theme-day .ex-mine b{color:#7b8599;}
+  body.theme-day .ex-mine pre{color:#28324a;}
+  body.theme-day .ex-blank{color:#a3abbd;}
+  body.theme-day .ex-selflbl{color:#7b8599;}
+  body.theme-day .ex-self button{border-color:#dfe5f0;background:#fff;color:#46516a;}
+  body.theme-day .ex-self button:hover{background:#f2f5fb;}
+
+  body.theme-day .ex-sheet{border-top-color:#e8ecf4;}
+  body.theme-day .ex-sq{border-color:#dfe5ef;background:#fff;color:#5f6b85;}
+  body.theme-day .ex-sq.done{background:#eaf1ff;border-color:#96b6f1;color:#2c5cc5;}
+  body.theme-day .ex-sq.ok{background:#e7f7ec;border-color:#7fd3a0;color:#1c7a44;}
+  body.theme-day .ex-sq.bad{background:#fdeceb;border-color:#f0a9a4;color:#ba332c;}
+  body.theme-day .ex-sq.cur{outline-color:#d8a12c;}
+
+  body.theme-day .ex-score b{color:#a97c12;}
+  body.theme-day .ex-score span{color:#8b95ab;}
+  body.theme-day .ex-meta{color:#75809a;}
+  body.theme-day .ex-meta b{color:#26304a;}
+  body.theme-day .ex-ritem{background:#fff;border-color:#e5e9f2;}
+  body.theme-day .ex-rh{color:#26304a;}
+  body.theme-day .ex-rh .t{color:#5a647c;}
+  body.theme-day .ex-rh .sc{color:#8b95ab;}
+  body.theme-day .ex-rh .rn{background:#f4f6fb;border-color:#e2e7f0;color:#46516a;}
+  body.theme-day .ex-rh .arw{color:#8b95ab;}
+  body.theme-day .ex-rh .badge.ok{background:#e7f7ec;color:#1c7a44;}
+  body.theme-day .ex-rh .badge.no{background:#fdeceb;color:#ba332c;}
+  body.theme-day .ex-rb{color:#3b465e;}
+  body.theme-day .ex-qmeta{color:#8b95ab;}
+  body.theme-day .ex-qfull{color:#1f2a3d;border-bottom-color:#eceff6;}
+  body.theme-day .ex-rb .lbl{color:#7b8599;}
+  body.theme-day .ex-rb .refbox{background:#f2f6ff;border-color:#d7e3f9;}
+  body.theme-day .ex-rb .expbox{background:#fffaf0;border-color:#f1e0b8;}
+  body.theme-day .ex-rb .expbox.dim{background:#f6f8fc;border-color:#e6eaf2;}
+  body.theme-day .ex-rb .refbox pre,
+  body.theme-day .ex-rb .expbox pre{color:#28324a;}
+  body.theme-day .ex-rb .expbox.dim pre{color:#75809a;}
+  body.theme-day .ex-ansline{color:#46516a;}
+  body.theme-day .ex-ansline .ok,
+  body.theme-day .ex-ansline b{color:#1c7a44;}
+  body.theme-day .ex-ansline .no{color:#ba332c;}
+  body.theme-day .ex-cover{background:#eafaf0;border-color:#a9dfc1;color:#1c7a44;}
+  body.theme-day .ex-cover.no{background:#fdeeec;border-color:#f0bdb7;color:#ba332c;}
+  body.theme-day .ex-mini{border-color:#e0e5ef;background:#fff;color:#46516a;}
+  body.theme-day .ex-mini:hover{background:#f2f5fb;color:#26304a;}
+  body.theme-day .ex-mini.on{background:#fdeeec;border-color:#f0bdb7;color:#ba332c;}
+  body.theme-day .ex-li{background:#fff;border-color:#e5e9f2;}
+  body.theme-day .ex-li:hover{border-color:#aac4f4;background:#f8fbff;}
+  body.theme-day .ex-li .n{color:#8b95ab;}
+  body.theme-day .ex-li .t{color:#26304a;}
+
+  /* 白天模式的确认弹窗 */
+  body.theme-day .exm-back{background:rgba(24,34,56,0.36);}
+  body.theme-day .exm-card{background:linear-gradient(180deg,#fff,#fbfcff);
+    border-color:#ecdfc0;
+    box-shadow:0 26px 72px rgba(23,38,66,0.20),0 0 60px rgba(216,161,44,0.10),0 1px 0 #fff inset;}
+  body.theme-day .exm-ico{background:radial-gradient(circle at 50% 32%,#fff4d6,#fdf9ee);
+    border-color:#eccf8e;box-shadow:0 0 22px rgba(216,161,44,.18);}
+  body.theme-day .exm-card h3{color:#26304a;}
+  body.theme-day .exm-card p{color:#5f6b85;}
+  body.theme-day .exm-card p b{color:#a97c12;}
+  body.theme-day .exm-note{color:#5f6b85;background:#f3f7ff;border-color:#dbe5f7;}
+  body.theme-day .exm-act button{border-color:#e0e5ef;background:#fff;color:#3b465e;}
+  body.theme-day .exm-act button:hover{background:#f2f5fb;}
+  body.theme-day .exm-act .main{background:linear-gradient(180deg,#f3cd6c,#dda63c);
+    border-color:#d9a94f;color:#2a1c05;}
+  body.theme-day .exm-act .main:hover{filter:brightness(1.05);}
+  body.theme-day .exm-act .danger{background:linear-gradient(180deg,#e6685f,#cc4239);
+    border-color:#d4584f;color:#fff;}
+
+  /* 白天模式：线索入口与右侧卡片 */
+  body.theme-day .ex-clue{border-color:rgba(216,161,44,0.55);
+    background:linear-gradient(100deg,#fff8e6,#fffdf8 62%,#f6f9ff);color:#46516a;}
+  body.theme-day .ex-clue:hover{border-color:#d8a12c;background:linear-gradient(100deg,#fff3d6,#fffdf8 62%,#f2f7ff);
+    box-shadow:0 8px 20px rgba(216,161,44,0.14);}
+  body.theme-day .ex-clue .ic{background:#fdf1d2;border-color:#eccf8e;}
+  body.theme-day .ex-clue .tx{color:#46516a;}
+  body.theme-day .ex-clue .tx b{color:#a97c12;}
+  body.theme-day .ex-clue .tx em{color:#26304a;}
+  body.theme-day .ex-clue .tx small{color:#8b95ab;}
+  body.theme-day .ex-clue .arw{color:#c08a1c;}
+  body.theme-day .exc-card{background:#fff;border-color:#e6ddc6;
+    box-shadow:-28px 0 70px rgba(23,38,66,0.16),0 0 0 1px #fff inset;}
+  body.theme-day .exc-hd{border-bottom-color:#eef1f7;}
+  body.theme-day .exc-tag{background:#fdf3dc;border-color:#e8cf98;color:#8a6410;}
+  body.theme-day .exc-hd .cnt{color:#8b95ab;}
+  body.theme-day .exc-x{border-color:#e0e5ef;background:#fff;color:#46516a;}
+  body.theme-day .exc-x:hover{background:#f2f5fb;color:#26304a;}
+  body.theme-day .exc-title{color:#1f2a3d;}
+  body.theme-day .exc-sub{color:#8b95ab;}
+  body.theme-day .exc-lbl{color:#7b8599;}
+  body.theme-day .exc-txt{color:#2c374e;}
+  body.theme-day .exc-chip{border-color:#e0e5ef;background:#fff;color:#46516a;}
+  body.theme-day .exc-chip:hover{border-color:#aac4f4;background:#f5f9ff;color:#26304a;}
+  body.theme-day .exc-chip.alt{border-color:#e8cf98;background:#fdf7ea;color:#7d5a10;}
+  body.theme-day .exc-chip small{color:#8b95ab;}
+  body.theme-day .exc-q{border-color:#e5e9f2;background:#fff;color:#46516a;}
+  body.theme-day .exc-q:hover{border-color:#aac4f4;background:#f5f9ff;color:#26304a;}
+  body.theme-day .exc-q .n,body.theme-day .exc-q i{color:#8b95ab;}
+  body.theme-day .exc-ft{border-top-color:#eef1f7;background:#fbfcfe;}
+  body.theme-day .exc-btn{border-color:#d9a94f;color:#2a1c05;
+    background:linear-gradient(90deg,#eab949,#e2893c);}
+  body.theme-day .exc-btn.ghost{background:#fff;border-color:#dfe5f0;color:#46516a;}
+  body.theme-day .exc-btn.ghost:hover{background:#f2f5fb;}
+  body.theme-day .exc-empty{color:#75809a;}
+
+  /* ============ 知识点延伸：影像 · 史料（由「知识点采集台」导出 media.js） ============ */
+  .kmedia{margin:14px 0 6px;}
+  .kmedia h3{font-size:12.5px;color:#a9b2d2;margin:0 0 8px;font-weight:400;letter-spacing:.3px;display:flex;align-items:center;gap:6px;}
+  .kmedia h3 .n{color:#7f8ab0;font-size:11px;}
+  .kmed{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;margin-bottom:7px;border-radius:11px;
+    border:1px solid rgba(226,59,59,0.28);background:rgba(226,59,59,0.09);text-decoration:none;transition:.16s;}
+  .kmed:hover{border-color:rgba(226,59,59,0.62);background:rgba(226,59,59,0.16);}
+  .kmed .ic{flex:none;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    font-size:11px;background:rgba(226,59,59,0.3);color:#ffd6d6;margin-top:1px;}
+  .kmed .tx{flex:1;min-width:0;font-size:13.5px;line-height:1.5;color:#ffe3e3;}
+  .kmed .tx small{display:block;font-size:11px;color:#c08f8f;margin-top:3px;line-height:1.5;}
+  .kmed.doc{border-color:rgba(91,140,255,0.3);background:rgba(91,140,255,0.09);}
+  .kmed.doc:hover{border-color:rgba(91,140,255,0.62);background:rgba(91,140,255,0.16);}
+  .kmed.doc .ic{background:rgba(91,140,255,0.3);color:#d6e3ff;}
+  .kmed.doc .tx{color:#dfe9ff;}
+  .kmed.doc .tx small{color:#93a7cd;}
+  .kmed-note{font-size:12px;line-height:1.85;color:#a9b2d2;background:rgba(255,255,255,0.05);
+    border-radius:9px;padding:8px 10px;margin-top:2px;white-space:pre-wrap;}
+  /* 配图：单列、按容器宽度自适应（弹窗只有 400px，不能用视口媒体查询分栏） */
+  .kfigs{display:grid;grid-template-columns:1fr;gap:8px;margin:2px 0 8px;}
+  .kfig{margin:0;border:1px solid rgba(91,140,255,0.28);background:rgba(91,140,255,0.07);
+    border-radius:11px;overflow:hidden;}
+  .kfig a{display:block;line-height:0;}
+  .kfig img{display:block;width:100%;height:auto;background:#0b1024;}
+  .kfig figcaption{padding:7px 10px 8px;font-size:12px;line-height:1.55;color:#dfe9ff;}
+  .kfig figcaption small{display:block;font-size:10.5px;color:#93a7cd;margin-top:2px;}
+  /* AI 氛围插画：必须带角标，防止被当成史料照片 */
+  .kfig{position:relative;}
+  .kfig.ill{border-color:rgba(224,163,122,0.38);background:rgba(224,163,122,0.07);}
+  .kfig-badge{position:absolute;left:0;top:0;z-index:2;font-size:10px;line-height:1;
+    letter-spacing:0.08em;padding:5px 9px;color:#20180a;font-weight:700;
+    background:linear-gradient(135deg,#f2d29b,#e0a37a);border-radius:0 0 10px 0;
+    box-shadow:0 1px 6px rgba(0,0,0,0.28);pointer-events:none;}
+  body.theme-day .exc-bd .kfig.ill{border-color:#efd0b4;background:#fff8f1;}
+  .kfig.bad a{display:none;}
+  .kfig.bad::before{content:"图片未找到 · 检查 media/ 下的文件名";display:block;padding:18px 10px;
+    font-size:11px;color:#e0a37a;text-align:center;line-height:1.6;}
+  /* 白天模式：只在线索卡片（浅底）里换成浅色配色；知识点弹窗始终是深底，沿用上面的深色样式 */
+  body.theme-day .exc-bd .kmedia h3{color:#5b6785;}
+  body.theme-day .exc-bd .kmedia h3 .n{color:#8b95ab;}
+  body.theme-day .exc-bd .kmed{border-color:#f3d8d8;background:#fff7f7;}
+  body.theme-day .exc-bd .kmed:hover{border-color:#e8b9b9;background:#fff1f1;}
+  body.theme-day .exc-bd .kmed .tx{color:#3d4356;}
+  body.theme-day .exc-bd .kmed .tx small{color:#8b95ab;}
+  body.theme-day .exc-bd .kmed.doc{border-color:#d7e3f8;background:#f5f9ff;}
+  body.theme-day .exc-bd .kmed.doc:hover{border-color:#b6cdf1;background:#eef5ff;}
+  body.theme-day .exc-bd .kmed.doc .tx{color:#324a6e;}
+  body.theme-day .exc-bd .kmed-note{background:#f5f7fb;color:#5d6884;}
+  body.theme-day .exc-bd .kfig{border-color:#d7e3f8;background:#f5f9ff;}
+  body.theme-day .exc-bd .kfig img{background:#e9eef7;}
+  body.theme-day .exc-bd .kfig figcaption{color:#324a6e;}
+  body.theme-day .exc-bd .kfig figcaption small{color:#8b95ab;}
+  body.theme-day .exc-bd .kfig.bad::before{color:#b06a3a;}
+
+  @media (max-width:560px){
+    .ex-body{padding:12px 11px 40px;}
+    .ex-stem{font-size:15px;}
+    .ex-opt{font-size:14px;padding:11px 12px;}
+    .ex-tool{padding:5px 9px;font-size:11.5px;}
+    .ex-ttl{font-size:13.5px;}
+    .ex-score b{font-size:38px;}
+    /* 手机上知识点卡片占满屏宽，圆角去掉更利落 */
+    #exClue{width:100vw;}
+    .exc-card{border-radius:0;border-right:1px solid rgba(233,185,73,0.26);}
+    .exc-title{font-size:17px;}
+    .ex-clue .tx{font-size:12.5px;}
+  }
+</style>
+
+<div id="exam">
+  <div class="ex-top">
+    <button class="ex-back" id="exBack" title="返回星图">←</button>
+    <div class="ex-ttl">15043 中国近现代史纲要<small>历年真题 · 考试与练习</small></div>
+    <div class="ex-tools">
+      <button class="ex-tool" data-act="view" data-kind="wrong">📕 错题本 <b id="exCntWrong">0</b></button>
+      <button class="ex-tool" data-act="view" data-kind="fav">⭐ 收藏 <b id="exCntFav">0</b></button>
+      <button class="ex-tool" data-act="view" data-kind="recent">🕘 最近学过</button>
+      <button class="ex-tool ex-theme" data-act="theme" title="切换昼 / 夜模式">☀️ 白天</button>
+    </div>
+  </div>
+  <div class="ex-body" id="exBody"></div>
+</div>
+
+<!-- 线索：交卷后从每题详解下方打开的右侧知识点卡片 -->
+<aside id="exClue" aria-hidden="true" aria-label="知识点卡片">
+  <div class="exc-card" role="dialog" aria-modal="false">
+    <div class="exc-hd">
+      <span class="exc-tag" id="excTag">知识点</span>
+      <span class="cnt" id="excCnt"></span>
+      <button class="exc-x" data-act="clueClose" title="关闭（Esc）" aria-label="关闭">×</button>
+    </div>
+    <div class="exc-bd" id="excBody"></div>
+    <div class="exc-ft" id="excFoot"></div>
+  </div>
+</aside>
+
+<script>
+/* ===================== 真题练习模块逻辑（15043） ===================== */
+(function(){
+  'use strict';
+  var DB = window.EXAM_DATA;
+  if(!DB || !DB.items || !DB.items.length){
+    var b0=document.getElementById('btnPractice');
+    if(b0) b0.addEventListener('click', function(){
+      window.alert('题库文件 exam_data.js 未加载，请把它与本页面放在同一目录后重新打开。');
+    });
+    return;
+  }
+  var ITEMS = DB.items, SES = DB.sessions || [];
+  var byId = function(id){ return ITEMS[id]; };
+  var $ = function(s){ return document.querySelector(s); };
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+  /* ---------- 本地存储 ---------- */
+  var KEY='xs15043:';
+  function lsGet(k,d){ try{ var v=localStorage.getItem(KEY+k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+  function lsSet(k,v){ try{ localStorage.setItem(KEY+k, JSON.stringify(v)); }catch(e){} }
+  var WRONG  = lsGet('wrong', {});    // { id: {n, t} }
+  var FAV    = lsGet('fav', []);      // [id]
+  var RECENT = lsGet('recent', []);   // [{id,t}]
+  var PAPERS = lsGet('papers', {});   // { key:{score,t} }
+
+  function addWrong(id){ var w=WRONG[id]||{n:0,t:0}; w.n++; w.t=Date.now(); WRONG[id]=w; lsSet('wrong',WRONG); updCounts(); }
+  function delWrong(id){ if(WRONG[id]){ delete WRONG[id]; lsSet('wrong',WRONG); updCounts(); } }
+  function isFav(id){ return FAV.indexOf(id)>=0; }
+  function toggleFav(id){ var i=FAV.indexOf(id); if(i>=0) FAV.splice(i,1); else FAV.unshift(id); lsSet('fav',FAV); updCounts(); }
+  function touchRecent(id){ RECENT = RECENT.filter(function(r){ return r.id!==id; });
+    RECENT.unshift({id:id,t:Date.now()}); if(RECENT.length>60) RECENT.length=60; lsSet('recent',RECENT); }
+  function updCounts(){
+    var a=document.getElementById('exCntWrong'), b=document.getElementById('exCntFav');
+    if(a) a.textContent=Object.keys(WRONG).length;
+    if(b) b.textContent=FAV.length;
+  }
+
+  /* ---------- 昼 / 夜主题 ---------- */
+  var THEME = lsGet('theme', 'night');   // 'night' | 'day'
+  function applyTheme(t){
+    var day = (t==='day');
+    document.body.classList.toggle('theme-day', day);
+    document.querySelectorAll('.ex-theme').forEach(function(b){
+      b.textContent = day ? '🌙 夜间' : '☀️ 白天';
+      b.title = day ? '切回星空夜间模式' : '切换到素净白天模式';
+    });
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', day ? '#f1f4fb' : '#050818');
+  }
+  function setTheme(t){ THEME=t; lsSet('theme', t); applyTheme(t); }
+  applyTheme(THEME);
+
+  /* ---------- 居中的确认弹窗（替代浏览器原生 confirm：原生会贴在顶部） ---------- */
+  var exmEl=null, exmCb=null;
+  function ensureExModal(){
+    if(exmEl) return exmEl;
+    var d=document.createElement('div');
+    d.id='exModal';
+    d.innerHTML='<div class="exm-back" data-exm="cancel"></div>'
+      +'<div class="exm-card" role="dialog" aria-modal="true">'
+      +  '<div class="exm-ico" id="exmIco">📄</div>'
+      +  '<h3 id="exmTitle">请确认</h3>'
+      +  '<p id="exmBody"></p>'
+      +  '<div class="exm-note" id="exmNote" style="display:none"></div>'
+      +  '<div class="exm-act"><button type="button" id="exmCancel">取消</button>'
+      +  '<button type="button" id="exmOk" class="main">确定</button></div>'
+      +'</div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function(e){
+      var t=e.target;
+      if(t.id==='exmOk'){ exmClose(true); return; }
+      if(t.id==='exmCancel' || t.getAttribute('data-exm')==='cancel'){ exmClose(false); }
+    });
+    exmEl=d; return d;
+  }
+  function exConfirm(opt, cb){
+    var d=ensureExModal();
+    d.querySelector('#exmIco').textContent=opt.icon||'📄';
+    d.querySelector('#exmTitle').textContent=opt.title||'请确认';
+    d.querySelector('#exmBody').innerHTML=opt.body||'';
+    var note=d.querySelector('#exmNote');
+    if(opt.note){ note.style.display='block'; note.innerHTML=opt.note; }
+    else { note.style.display='none'; note.innerHTML=''; }
+    var okB=d.querySelector('#exmOk'), noB=d.querySelector('#exmCancel');
+    okB.textContent=opt.ok||'确定';
+    okB.className = opt.danger ? 'main danger' : 'main';
+    noB.textContent=opt.cancel||'取消';
+    noB.style.display=(opt.cancel===false)?'none':'';
+    exmCb=cb; d.classList.add('open');
+    setTimeout(function(){ try{ okB.focus(); }catch(e){} },40);
+  }
+  function exAlert(opt){
+    opt=opt||{}; opt.cancel=false; opt.ok=opt.ok||'知道了'; opt.icon=opt.icon||'✨';
+    exConfirm(opt, function(){});
+  }
+  function exmClose(v){
+    if(!exmEl || !exmEl.classList.contains('open')) return;
+    exmEl.classList.remove('open');
+    var cb=exmCb; exmCb=null; if(cb) cb(v);
+  }
+  function exmIsOpen(){ return !!(exmEl && exmEl.classList.contains('open')); }
+
+  /* ---------- 分值：25×1 + 5×6 + 3×15 = 100 ---------- */
+  function ptsOf(it){ return it.t==='c' ? 1 : (it.n<=30 ? 6 : 15); }
+  function sesLabel(key){ return key.slice(0,4)+'年'+parseInt(key.slice(4),10)+'月'; }
+  // 题库参考答案前多带一个「答案：」标签，展示时去掉
+  function ansText(a){ return String(a||'').replace(/^\s*答\s*案\s*[:：]\s*/, '').trim(); }
+
+  /* ---------- 简答/论述：按要点覆盖自动估分 ---------- */
+  var PUNCT=/[，。、；：？！“”‘’（）《》〈〉…—\s·,.;:?!"'()\[\]{}<>\/\\|~`@#$%^&*+=_\-]/g;
+  function stripLead(s){
+    return s.replace(/^[（(]?\d{1,2}[)）.、．]\s*/,'')
+            .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/,'')
+            .replace(/^[\u4e00-\u9fa5]{2,8}\s*[:：]\s*/,'')
+            .trim();
+  }
+  function pointsOf(ref){
+    var t=String(ref||'').replace(/^答案[:：]\s*/,'').trim();
+    var parts=t.split(/[\n。；;]+/).map(function(s){return s.trim();}).filter(Boolean);
+    parts=parts.map(stripLead).filter(function(p){ return p.replace(PUNCT,'').length>=5; });
+    if(!parts.length) parts=[stripLead(t)];
+    return parts.slice(0,10);
+  }
+  function charOverlap(point, ans){
+    var a=Array.from(new Set(point.replace(PUNCT,'').split(''))).filter(Boolean);
+    var b=new Set(ans.replace(PUNCT,'').split(''));
+    if(!a.length||!b.size) return 0;
+    var hit=0; a.forEach(function(c){ if(b.has(c)) hit++; });
+    return hit/a.length;
+  }
+  function gradeText(ans, ref, full){
+    var ps=pointsOf(ref), hit=0;
+    ps.forEach(function(p){ if(charOverlap(p,ans)>=0.45) hit++; });
+    var ratio=ps.length? hit/ps.length : 0;
+    return {score:Math.round(full*ratio), full:full, hit:hit, total:ps.length, ratio:ratio};
+  }
+
+  /* ---------- 状态 ---------- */
+  var S={view:'home', tab:'exam', trainType:'all', trainScope:'all', listKind:null, paper:null, train:null, resultOnlyWrong:false};
+
+  /* ---------- 渲染 ---------- */
+  function paint(keepScroll){
+    var body=$('#exBody'); if(!body) return;
+    var top=keepScroll? body.scrollTop : 0;
+    var h='';
+    if(S.view==='home') h=viewHome();
+    else if(S.view==='paper') h=viewPaper();
+    else if(S.view==='result') h=viewResult();
+    else if(S.view==='train') h=viewTrain();
+    else if(S.view==='list') h=viewList();
+    body.innerHTML=h;
+    body.scrollTop=top;
+    updCounts();
+    // 成绩页/练习页出现后，后台先把「题目→知识点」算完，点线索时零等待
+    if(S.view==='result' || S.view==='train'){
+      clearTimeout(_warmTimer);
+      _warmTimer=setTimeout(function(){ try{ clueWarm(); }catch(e){} }, 420);
+    }
+    var back=$('#exBack'); if(back) back.textContent = (S.view==='home'?'×':'←');
+  }
+
+  function optsHTML(it, mode, chosen){
+    return it.o.map(function(o,j){
+      var cls='ex-opt';
+      if(mode==='pick' && chosen===j) cls+=' sel';
+      if(mode==='show'){
+        if(j===it.a) cls+=' ok';
+        else if(chosen===j) cls+=' no';
+        cls+=' lock';
+      }
+      return '<div class="'+cls+'" data-act="opt" data-j="'+j+'"><span class="k">'+'ABCD'[j]+'</span><span>'+esc(o)+'</span></div>';
+    }).join('');
+  }
+
+  function viewHome(){
+    var wrongN=Object.keys(WRONG).length, favN=FAV.length;
+    var h='<div class="ex-inner">';
+    h+='<div class="ex-tabs">'
+      +'<button class="ex-tab'+(S.tab==='exam'?' on':'')+'" data-act="tab" data-tab="exam">📝 考试 · 按考期整卷</button>'
+      +'<button class="ex-tab'+(S.tab==='train'?' on':'')+'" data-act="tab" data-tab="train">✍️ 练习 · 逐题精练</button>'
+      +'</div>';
+    if(S.tab==='exam'){
+      h+='<p class="ex-note">共 '+SES.length+' 个考期、'+ITEMS.length+' 道真题。选择一个考期开始整卷作答，交卷后自动判分，并逐题给出答案与详解；试卷满分 100（单选 25×1 + 简答 5×6 + 论述 3×15）。</p>';
+      h+='<div class="ex-grid">';
+      SES.slice().reverse().forEach(function(s){
+        var c=0, t=0;
+        s.ids.forEach(function(id){ if(byId(id).t==='c') c++; else t++; });
+        var rec=PAPERS[s.key];
+        h+='<button class="ex-ses" data-act="ses" data-key="'+s.key+'">'
+          +'<b>'+esc(s.label)+'</b><span>'+c+' 单选 · '+t+' 大题</span>'
+          +(rec?'<i>上次 '+rec.score+' 分</i>':'<i>未作答</i>')+'</button>';
+      });
+      h+='</div>';
+    } else {
+      var nAll=ITEMS.length, nC=0, nS=0;
+      ITEMS.forEach(function(i){ if(i.t==='c') nC++; else nS++; });
+      h+='<p class="ex-note">按考试题型分类，一次一题：答完立即批改，并给出答案与详解。简答与论述由系统按要点覆盖自动估分，你也可以对照参考答案自评修正。</p>';
+      h+='<div class="ex-chips">';
+      [['all','全部题型',nAll],['c','单项选择',nC],['s','简答与论述',nS]].forEach(function(x){
+        h+='<button class="ex-chip'+(S.trainType===x[0]?' on':'')+'" data-act="type" data-v="'+x[0]+'">'+x[1]+' <small>'+x[2]+'</small></button>';
+      });
+      h+='</div><div class="ex-chips">';
+      [['all','全部题目',nAll],['wrong','错题本',wrongN],['fav','我的收藏',favN]].forEach(function(x){
+        h+='<button class="ex-chip'+(S.trainScope===x[0]?' on':'')+'" data-act="scope" data-v="'+x[0]+'">'+x[1]+' <small>'+x[2]+'</small></button>';
+      });
+      h+='</div>';
+      h+='<div class="ex-acts"><button class="ex-btn" data-act="startTrain">开始练习 ▸</button></div>';
+    }
+    h+='</div>';
+    return h;
+  }
+
+  /* ---------- 考试：答题 ---------- */
+  function viewPaper(){
+    var p=S.paper, it=byId(p.ids[p.cur]), full=ptsOf(it);
+    var done=p.ids.filter(function(id){ var v=p.ans[id]; return v!=null && (typeof v==='number' || v.trim()); }).length;
+    var h='<div class="ex-inner">';
+    h+='<div class="ex-bar"><span class="ex-tag">'+esc(p.label)+'</span>'
+      +'<span class="ex-pos">第 '+(p.cur+1)+' / '+p.ids.length+' 题 · 本题 '+full+' 分</span>'
+      +'<span class="ex-sub"><span>已答 '+done+'</span><button class="ex-btn" style="padding:8px 16px" data-act="submitPaper">交卷</button></span></div>';
+    h+='<div class="ex-card">';
+    h+='<div class="ex-stem">'+esc(it.q)+'</div>';
+    if(it.t==='c'){
+      h+=optsHTML(it,'pick',p.ans[it.id]);
+    } else {
+      var val=p.ans[it.id]||'';
+      h+='<textarea class="ex-ta" data-id="'+it.id+'" placeholder="在这里作答……（可只写要点）">'+esc(val)+'</textarea>';
+      h+='<div class="ex-hintline">简答/论述题交卷后由系统按要点覆盖自动估分，也可对照参考答案自评。</div>';
+    }
+    h+='</div>';
+    h+='<div class="ex-acts">'
+      +'<button class="ex-btn ghost" data-act="prev"'+(p.cur===0?' disabled':'')+'>◂ 上一题</button>'
+      +'<button class="ex-btn ghost" data-act="next"'+(p.cur===p.ids.length-1?' disabled':'')+'>下一题 ▸</button>'
+      +'<span class="sp"></span>'
+      +'<button class="ex-star'+(isFav(it.id)?' on':'')+'" data-act="fav" data-id="'+it.id+'" title="收藏本题">'+(isFav(it.id)?'★':'☆')+'</button>'
+      +'</div>';
+    h+='<div class="ex-sheet">';
+    p.ids.forEach(function(id,i){
+      var v=p.ans[id], dn=(v!=null && (typeof v==='number' || v.trim()));
+      h+='<button class="ex-sq'+(dn?' done':'')+(i===p.cur?' cur':'')+'" data-act="goto" data-i="'+i+'">'+byId(id).n+'</button>';
+    });
+    h+='</div>';
+    h+='</div>';
+    return h;
+  }
+
+  /* ---------- 考试：成绩 + 逐题答案与详解（默认全部展开） ---------- */
+  function viewResult(){
+    var p=S.paper, r=p.result;
+    var wrongN=r.rows.filter(function(x){ return !x.ok; }).length;
+    var rows=S.resultOnlyWrong ? r.rows.filter(function(x){ return !x.ok; }) : r.rows;
+    var h='<div class="ex-inner">';
+    h+='<div class="ex-bar"><span class="ex-tag">'+esc(p.label)+'</span>'
+      +'<span class="ex-pos">交卷完成 · 自动判分 · 每题答案与详解已展开</span></div>';
+    h+='<div class="ex-card" style="padding:18px 18px 16px">';
+    h+='<div class="ex-score"><b>'+r.score+'</b><span>/ '+r.total+' 分</span></div>';
+    h+='<div class="ex-meta"><span>单项选择 <b>'+r.byC.g+'/'+r.byC.t+'</b></span><span>简答 <b>'+r.byJ.g+'/'+r.byJ.t+'</b></span><span>论述 <b>'+r.byL.g+'/'+r.byL.t+'</b></span>'
+      +'<span>正确题数 <b>'+(r.rows.length-wrongN)+'/'+r.rows.length+'</b></span></div>';
+    h+='<div class="ex-hintline">每题下方依次给出「正确答案 → 你的作答 → 参考答案 → 详解」，点题头可单独收起。简答与论述按要点覆盖自动估分，如觉偏差可对照参考答案自行核对。</div>';
+    h+='</div>';
+    h+='<div class="ex-rtools">'
+      +'<button class="ex-mini'+(S.resultOnlyWrong?' on':'')+'" data-act="onlyWrong">'+(S.resultOnlyWrong?'✓ 只看错题':'只看错题')+(wrongN?'（'+wrongN+'）':'')+'</button>'
+      +'<span class="sp"></span>'
+      +'<button class="ex-mini" data-act="allOpen">全部展开</button>'
+      +'<button class="ex-mini" data-act="allClose">全部收起</button>'
+      +'</div>';
+    h+='<div class="ex-rlist">';
+    if(!rows.length) h+='<div class="ex-empty">本卷没有错题，全部答对 🎉</div>';
+    rows.forEach(function(row){
+      var it=byId(row.id);
+      var typ=it.t==='c' ? '单项选择' : (row.full<=6 ? '简答题' : '论述题');
+      var fav=isFav(it.id);
+      h+='<div class="ex-ritem open" data-row="'+it.id+'"><div class="ex-rh" data-act="toggleItem">'
+        +'<span class="badge '+(row.ok?'ok':'no')+'">'+(row.ok?'✓':'✗')+'</span>'
+        +'<span class="rn">'+it.n+'</span>'
+        +'<span class="t">'+esc(it.q)+'</span>'
+        +'<button class="ex-star'+(fav?' on':'')+'" data-act="fav" data-id="'+it.id+'" title="收藏本题">'+(fav?'★':'☆')+'</button>'
+        +'<span class="sc">'+row.sc+'/'+row.full+'</span>'
+        +'<span class="arw">▾</span></div>';
+      h+='<div class="ex-rb">';
+      h+='<div class="ex-qmeta">'+sesLabel(it.s)+' · '+typ+' · 第 '+it.n+' 题 · 本题 '+row.full+' 分 · 实得 '+row.sc+' 分</div>';
+      h+='<div class="ex-qfull">'+esc(it.q)+'</div>';
+      if(it.t==='c'){
+        h+=optsHTML(it,'show',row.val);
+        h+='<div class="ex-ansline">';
+        if(row.val==null) h+='<span class="no">✗ 未作答</span>';
+        else if(row.ok) h+='<span class="ok">✓ 你选对了</span>';
+        else h+='<span class="no">✗ 你的选择：'+'ABCD'[row.val]+'</span>';
+        h+='　正确答案：<b>'+'ABCD'[it.a]+'</b> · '+esc(it.o[it.a])+'</div>';
+      } else {
+        h+='<div class="lbl">你的作答</div>';
+        if(row.val && String(row.val).trim()) h+='<div class="ex-mine"><pre>'+esc(row.val)+'</pre></div>';
+        else h+='<div class="ex-mine"><pre class="ex-blank">（未作答）</pre></div>';
+        if(row.g) h+='<div class="ex-ansline">要点覆盖：<b>'+row.g.hit+'/'+row.g.total+'（'+Math.round(row.g.ratio*100)+'%）</b>　按命中比例折算得分</div>';
+        h+='<div class="lbl">参考答案</div><div class="refbox"><pre>'+esc(ansText(it.a))+'</pre></div>';
+      }
+      h+='<div class="lbl">详解</div>';
+      if(it.e && String(it.e).trim()) h+='<div class="expbox"><pre>'+esc(it.e)+'</pre></div>';
+      else h+='<div class="expbox dim"><pre>本题参考答案已列出全部评分要点，按要点逐条对照即可。</pre></div>';
+      h+=clueEntryHTML(it.id);
+      h+='</div></div>';
+    });
+    h+='</div>';
+    h+='<div class="ex-acts" style="margin-top:16px">'
+      +'<button class="ex-btn" data-act="sesAgain">重做本卷</button>'
+      +'<button class="ex-btn ghost" data-act="home">返回选择考期</button>'
+      +'<button class="ex-btn ghost" data-act="view" data-kind="wrong">去错题本</button>'
+      +'</div>';
+    h+='</div>';
+    return h;
+  }
+
+  /* ---------- 练习：逐题 ---------- */
+  function viewTrain(){
+    var t=S.train, id=t.ids[t.i], it=byId(id), full=ptsOf(it);
+    var graded=t.graded[id], g=t.gradeInfo && t.gradeInfo[id];
+    var h='<div class="ex-inner">';
+    h+='<div class="ex-bar">'
+      +'<span class="ex-tag'+(it.t==='s'?' s':'')+'">'+(it.t==='c'?'单项选择':'简答/论述')+'</span>'
+      +'<span class="ex-pos">第 '+(t.i+1)+' / '+t.ids.length+' 题 · '+sesLabel(it.s)+'</span>'
+      +'<span class="ex-pos">答对 '+t.correct+' · 已做 '+t.done+'</span>'
+      +'<button class="ex-star'+(isFav(id)?' on':'')+'" data-act="fav" data-id="'+id+'" title="收藏本题">'+(isFav(id)?'★':'☆')+'</button>'
+      +'</div>';
+    h+='<div class="ex-card"><div class="ex-stem">'+esc(it.q)+'</div>';
+    if(it.t==='c'){
+      h+=optsHTML(it, graded!=null?'show':'pick', t.ans[id]);
+    } else {
+      if(graded!=null){
+        h+='<div class="ex-mine"><b>你的作答</b><pre>'+esc(t.ans[id]||'（未作答）')+'</pre></div>';
+      } else {
+        h+='<textarea class="ex-ta" data-id="'+id+'" placeholder="在这里作答……（可只写要点）">'+esc((t.draft&&t.draft[id])||'')+'</textarea>';
+        h+='<div class="ex-hintline">写完点“提交批改”，系统按要点覆盖估分，并给出参考答案与详解。</div>';
+      }
+    }
+    h+='</div>';
+
+    if(graded!=null){
+      h+='<div class="ex-fb '+(graded?'good':'bad')+'">';
+      if(it.t==='c'){
+        h+='<h4>'+(graded?'✅ 答对了':'❌ 答错了')+'</h4>';
+        h+='<div class="ex-ansline" style="margin-top:0">正确答案：<b>'+'ABCD'[it.a]+'</b> · '+esc(it.o[it.a])+'</div>';
+      } else {
+        h+='<h4>系统估分：'+(g?g.score:0)+' / '+full+' 分 · 要点覆盖 '+(g?g.hit+'/'+g.total+'（'+Math.round(g.ratio*100)+'%）':'—')+'</h4>';
+        h+='<div class="lbl">参考答案</div><div class="refbox"><pre>'+esc(ansText(it.a))+'</pre></div>';
+      }
+      if(it.e) h+='<div class="lbl">详解</div><div class="expbox"><pre>'+esc(it.e)+'</pre></div>';
+      h+=clueEntryHTML(id);
+      if(it.t==='s'){
+        h+='<div class="ex-self"><span class="ex-selflbl">自评修正：</span>'
+          +'<button data-act="self" data-ok="1">✅ 我答对了</button>'
+          +'<button data-act="self" data-ok="0">❌ 加入错题本</button></div>';
+      }
+      h+='</div>';
+    }
+
+    h+='<div class="ex-acts">';
+    if(it.t==='s' && graded==null){
+      h+='<button class="ex-btn" data-act="gradeTrain">提交批改</button>';
+    }
+    if(graded!=null){
+      h+='<button class="ex-btn" data-act="trainNext">'+(t.i>=t.ids.length-1?'完成练习':'下一题 ▸')+'</button>';
+    }
+    h+='<span class="sp"></span><button class="ex-btn ghost" data-act="home">结束练习</button>';
+    h+='</div>';
+    h+='</div>';
+    return h;
+  }
+
+  /* ---------- 错题本 / 收藏 / 最近 ---------- */
+  function viewList(){
+    var kind=S.listKind, ids=[];
+    if(kind==='wrong') ids=Object.keys(WRONG).map(Number);
+    else if(kind==='fav') ids=FAV.slice();
+    else ids=RECENT.map(function(r){ return r.id; });
+    var title={wrong:'📕 错题本',fav:'⭐ 我的收藏',recent:'🕘 最近学过'}[kind];
+    var h='<div class="ex-inner">';
+    h+='<div class="ex-bar"><span class="ex-tag">'+title+'</span><span class="ex-pos">'+ids.length+' 题</span>'
+      +(ids.length?'<span class="ex-sub"><button class="ex-btn ghost" style="padding:7px 14px" data-act="practiceList">'+'开始练习 ▸'+'</button></span>':'')
+      +'</div>';
+    if(!ids.length){
+      h+='<div class="ex-empty">这里还是空的。<br>在考试或练习中，答错的题会自动进入错题本，点题目右上角的 ☆ 可收藏。</div>';
+    } else {
+      ids.forEach(function(id){
+        var it=byId(id), w=WRONG[id];
+        var meta=(kind==='wrong'&&w)? ('错 '+w.n+' 次') : sesLabel(it.s);
+        h+='<div class="ex-li" data-act="openItem" data-id="'+id+'">'
+          +'<span class="n">'+meta+'</span>'
+          +'<span class="t">'+it.n+'. '+esc(it.q)+'</span></div>';
+      });
+    }
+    h+='<div class="ex-acts" style="margin-top:12px"><button class="ex-btn ghost" data-act="home">返回</button>'
+      +(kind==='wrong'&&ids.length?'<button class="ex-btn ghost" data-act="clearWrong">清空错题本</button>':'')
+      +(kind==='fav'&&ids.length?'<button class="ex-btn ghost" data-act="clearFav">清空收藏</button>':'')
+      +'</div>';
+    h+='</div>';
+    return h;
+  }
+
+  /* ================= 线索：题目 ↔ 知识点（本地匹配，无需联网） ================= */
+  var KP  = (typeof knowledge!=='undefined' && knowledge && knowledge.length) ? knowledge : null;
+  var CHM = (typeof chapterMeta!=='undefined' && chapterMeta) ? chapterMeta : {};
+  var PMT = (typeof partMeta!=='undefined' && partMeta) ? partMeta : {};
+  var _ci=null, _cc={}, _kcnt={}, _warmed=false, _warmTimer=null;
+
+  // 只保留汉字/字母数字，去掉标点与空白，再切成二元组（中文无需分词也能用）
+  function _normZ(s){ return String(s==null?'':s).replace(/[，。、；：？！“”‘’（）《》〈〉…—\s·,.;:?!"'()\[\]{}<>\/\\|~`@#$%^&*+=_\-]/g,''); }
+  function _bgrams(s){
+    s=_normZ(s); var out=[], seen={};
+    for(var i=0;i<s.length-1;i++){ var g=s.slice(i,i+2); if(!seen[g]){ seen[g]=1; out.push(g); } }
+    return out;
+  }
+  function clueIndex(){
+    if(_ci || !KP) return _ci;
+    var N=KP.length, TF=[], df={}, i, g;
+    for(i=0;i<N;i++){
+      var c={}, kp=KP[i];
+      _bgrams(kp.title).forEach(function(x){ c[x]=(c[x]||0)+3; });          // 标题权重最高
+      _bgrams(kp.speak).forEach(function(x){ c[x]=(c[x]||0)+1; });
+      if(kp.quiz && kp.quiz.q) _bgrams(kp.quiz.q).forEach(function(x){ c[x]=(c[x]||0)+1.5; });
+      TF.push(c);
+      for(g in c) df[g]=(df[g]||0)+1;
+    }
+    // IDF：越少见的二元组越能定位考点（"三湾改编"≫"中国人民"）
+    var Wd={};
+    for(g in df) Wd[g]=Math.log(1+N/df[g]);
+    var post={};
+    for(i=0;i<N;i++){
+      var cc=TF[i];
+      for(g in cc){ if(!post[g]) post[g]=[]; post[g].push(i, cc[g]); }
+    }
+    var titles=[];
+    for(i=0;i<N;i++){ var t=_normZ(KP[i].title); if(t.length>=4) titles.push([t,i]); }
+    _ci={N:N,TF:TF,W:Wd,post:post,titles:titles};
+    return _ci;
+  }
+  function clueMatch(it){
+    var ix=clueIndex(); if(!ix) return null;
+    var txt=it.q+' '+(it.t==='c' ? (it.o[it.a]||'') : (it.a||''))+' '+(it.e||'');
+    var sc=new Float64Array(ix.N), i;
+    _bgrams(txt).forEach(function(g){
+      var p=ix.post[g]; if(!p) return;
+      var w=ix.W[g];
+      for(var j=0;j<p.length;j+=2) sc[p[j]] += ix.TF[p[j]][g]*w;
+    });
+    var nt=_normZ(txt);
+    ix.titles.forEach(function(t){ if(nt.indexOf(t[0])>=0) sc[t[1]] += 4; });   // 标题原样出现，强boost
+    var arr=[];
+    for(i=0;i<ix.N;i++) if(sc[i]>8) arr.push([i,sc[i]]);
+    if(!arr.length) return null;
+    arr.sort(function(a,b){ return b[1]-a[1]; });
+    return {main:arr[0][0], list:arr.slice(0,3)};
+  }
+  function clueFor(id){
+    if(_cc[id]!==undefined) return _cc[id];
+    var it=byId(id); if(!it){ _cc[id]=null; return null; }
+    var r=clueMatch(it); _cc[id]=r||null; return _cc[id];
+  }
+  // 预先算全库（约 0.3 秒），用于"同一考点共命中 N 题"与同考点真题列表
+  function clueWarm(){
+    if(_warmed || !KP) return; _warmed=true;
+    for(var i=0;i<ITEMS.length;i++){
+      var r=clueFor(i);
+      if(r){ _kcnt[r.main]=(_kcnt[r.main]||0)+1; }
+    }
+  }
+
+  var _rti=null, _rmap=null;
+  function titleIdx(t){
+    if(!_rti){ _rti={}; for(var i=0;i<KP.length;i++){ if(_rti[KP[i].title]==null) _rti[KP[i].title]=i; } }
+    return _rti[t]==null ? -1 : _rti[t];
+  }
+  function relMap(){
+    if(_rmap) return _rmap;
+    _rmap={};
+    if(typeof relationDefs!=='undefined' && relationDefs){
+      relationDefs.forEach(function(r){
+        (_rmap[r[0]]||(_rmap[r[0]]=[])).push({t:r[1],l:r[2]});
+        (_rmap[r[1]]||(_rmap[r[1]]=[])).push({t:r[0],l:'← '+r[2]});
+      });
+    }
+    return _rmap;
+  }
+  function itemsForKp(kpIdx, exclude){
+    if(!_warmed) clueWarm();
+    var out=[];
+    for(var i=0;i<ITEMS.length;i++){
+      if(i===exclude) continue;
+      var r=clueFor(i);
+      if(r && r.main===kpIdx) out.push(i);
+    }
+    return out;
+  }
+
+  /* ---------- 线索入口（详解下方） ---------- */
+  function clueEntryHTML(id){
+    if(!KP) return '';
+    var cl=clueFor(id); if(!cl) return '';
+    var kp=KP[cl.main]; if(!kp) return '';
+    var extra=cl.list.length-1;
+    return '<button class="ex-clue" data-act="clue" data-id="'+id+'">'
+      +'<span class="ic">🧩</span>'
+      +'<span class="tx">线索 · 这道题关联「<em>'+esc(kp.title)+'</em>」'
+      +'<small>点击在右侧展开知识点卡片'+(extra?' · 另有 '+extra+' 个相关考点':'')+'</small></span>'
+      +'<span class="arw">▸</span></button>';
+  }
+
+  /* ---------- 右侧知识点卡片 ---------- */
+  var DW={open:false, kp:-1, item:-1};
+  function _el(id){ return document.getElementById(id); }
+
+  function clueShow(kpIdx, itemId){
+    var kp=KP && KP[kpIdx]; if(!kp) return;
+    if(!_warmed) clueWarm();
+    DW.kp=kpIdx; if(itemId!=null) DW.item=itemId;
+    var c=CHM[kp.ch]||{}, col=c.color||'#e9b949';
+    var tag=_el('excTag');
+    if(tag){ tag.textContent=c.tag||'知识点';
+      tag.style.color=col; tag.style.borderColor=col+'66'; tag.style.background=col+'1f'; }
+    var cnt=_el('excCnt');
+    var n=_kcnt[kpIdx]||0;
+    if(cnt) cnt.textContent = n ? '历年真题命中 '+n+' 题' : '';
+
+    var h='<h3 class="exc-title">'+esc(kp.title)+'</h3>';
+    h+='<div class="exc-sub">'+esc(c.title||c.label||'')+'</div>';
+    h+='<div class="exc-sec"><div class="exc-lbl">📖 考点讲解</div><div class="exc-txt">'+esc(kp.speak)+'</div></div>';
+    if(window.kpMediaHTML) h+=window.kpMediaHTML(kp.title);
+
+    // 相关考点：先给「本题的其他候选」，再给知识拓扑上的相邻点
+    var chips=[], seen={}; seen[kpIdx]=1;
+    var cl=(DW.item!=null)? clueFor(DW.item) : null;
+    if(cl) cl.list.forEach(function(x){
+      if(x[0]!==kpIdx && !seen[x[0]]){ seen[x[0]]=1; chips.push({i:x[0], alt:true, why:'本题相关考点'}); }
+    });
+    (relMap()[kp.title]||[]).forEach(function(r){
+      var j=titleIdx(r.t);
+      if(j>=0 && !seen[j]){ seen[j]=1; chips.push({i:j, alt:false, why:r.l}); }
+    });
+    chips=chips.slice(0,8);
+    if(chips.length){
+      h+='<div class="exc-sec"><div class="exc-lbl">🔗 相关考点 · 点开继续延伸</div><div class="exc-chips">';
+      chips.forEach(function(x){
+        h+='<button class="exc-chip'+(x.alt?' alt':'')+'" data-act="clueKp" data-kp="'+x.i+'">'
+          +esc(KP[x.i].title)+'<small>'+esc(x.why)+'</small></button>';
+      });
+      h+='</div></div>';
+    }
+
+    // 同一考点的历年真题
+    var list=itemsForKp(kpIdx, DW.item);
+    if(list.length){
+      h+='<div class="exc-sec"><div class="exc-lbl">📚 同一考点还有 '+list.length+' 道真题</div>';
+      list.slice(0,8).forEach(function(id){
+        var it=byId(id);
+        h+='<button class="exc-q" data-act="clueGo" data-id="'+id+'">'
+          +'<span class="n">'+sesLabel(it.s)+'</span>'
+          +'<span class="t">第 '+it.n+' 题 · '+esc(it.q)+'</span><i>▸</i></button>';
+      });
+      if(list.length>8) h+='<div class="exc-empty">还有 '+(list.length-8)+' 道，去「练习 · 按题型」里刷这个考点。</div>';
+      h+='</div>';
+    }
+    var bd=_el('excBody'); if(bd) bd.innerHTML=h;
+    var ft=_el('excFoot');
+    if(ft) ft.innerHTML='<button class="exc-btn" data-act="clueSky" data-kp="'+kpIdx+'">🌌 在星空中定位</button>'
+      +'<button class="exc-btn ghost" data-act="clueChapter" data-kp="'+kpIdx+'">📑 本章导读</button>';
+  }
+  function clueOpen(id){
+    if(!KP) return;
+    var cl=clueFor(id), d=_el('exClue'); if(!cl || !d) return;
+    DW.item=id; clueShow(cl.main, id);
+    d.classList.add('open'); d.setAttribute('aria-hidden','false'); DW.open=true;
+    document.body.classList.add('clue-open');
+    var bd=_el('excBody'); if(bd) bd.scrollTop=0;
+  }
+  function clueClose(){
+    var d=_el('exClue'); if(!d || !DW.open) return;
+    d.classList.remove('open'); d.setAttribute('aria-hidden','true'); DW.open=false;
+    document.body.classList.remove('clue-open');
+  }
+  // 点「同考点的另一道真题」：本卷内滚动定位，其他卷则单独打开精练
+  function clueGoto(id){
+    var inPaper=false;
+    if(S.view==='result' && S.paper && S.paper.result){
+      inPaper=S.paper.result.rows.some(function(r){ return r.id===id; });
+    }
+    clueClose();
+    if(inPaper){
+      var row=document.querySelector('#exBody [data-row="'+id+'"]');
+      if(!row && S.resultOnlyWrong){ S.resultOnlyWrong=false; paint(); row=document.querySelector('#exBody [data-row="'+id+'"]'); }
+      if(row){
+        row.classList.add('open');
+        row.scrollIntoView({block:'center',behavior:'smooth'});
+        row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+        setTimeout(function(){ row.classList.remove('flash'); }, 1600);
+        return;
+      }
+    }
+    S.train={ids:[id],i:0,ans:{},graded:{},gradeInfo:{},draft:{},correct:0,done:0};
+    S.view='train'; paint(); touchRecent(id);
+  }
+  function clueSky(kpIdx){
+    var kp=KP && KP[kpIdx]; if(!kp) return;
+    var cs=window.__course;
+    if(!cs || !cs.openKP){
+      exAlert({icon:'🌌', title:'星空模式未就绪', body:'当前是图文降级模式（3D 场景未加载成功），无法在星空中定位这个考点。', ok:'知道了'});
+      return;
+    }
+    clueClose(); closeExam();
+    setTimeout(function(){ try{ cs.openKP(kp); }catch(e){} }, 280);
+  }
+  function clueChapter(kpIdx){
+    var kp=KP && KP[kpIdx]; if(!kp) return;
+    var cs=window.__course;
+    if(!cs || !cs.openChapter){
+      exAlert({icon:'📑', title:'章节目录未就绪', body:'当前是图文降级模式（3D 场景未加载成功），无法打开本章导读。', ok:'知道了'});
+      return;
+    }
+    clueClose(); closeExam();
+    setTimeout(function(){ try{ cs.openChapter(kp.ch); }catch(e){} }, 280);
+  }
+
+  /* ---------- 行为 ---------- */
+  function startPaper(key){
+    var s=null; SES.forEach(function(x){ if(x.key===key) s=x; });
+    if(!s) return;
+    S.paper={key:s.key,label:s.label,ids:s.ids.slice(),ans:{},cur:0,submitted:false,result:null};
+    S.view='paper'; paint();
+    if(S.paper.ids.length) touchRecent(S.paper.ids[0]);
+  }
+  function submitPaper(){
+    var p=S.paper; if(!p||p.submitted) return;
+    var total0=p.ids.length;
+    var blank=p.ids.filter(function(id){ var v=p.ans[id]; return v==null || (typeof v==='string' && !v.trim()); }).length;
+    var doSubmit=function(){
+      var got=0,total=0,byC={g:0,t:0},byJ={g:0,t:0},byL={g:0,t:0},rows=[];
+      p.ids.forEach(function(id){
+        var it=byId(id), full=ptsOf(it), sc=0, ok=false, g=null, val=p.ans[id];
+        var hasAns=(val!=null) && (typeof val==='number' || String(val).trim().length>0);
+        total+=full;
+        if(it.t==='c'){
+          ok=(val===it.a); sc=ok?full:0; byC.t+=full; byC.g+=sc;
+        } else {
+          g=gradeText(typeof val==='string'?val:'', it.a, full);
+          sc=g.score; ok=(g.ratio>=0.6);
+          if(full===6){ byJ.t+=full; byJ.g+=sc; } else { byL.t+=full; byL.g+=sc; }
+        }
+        // 只把「作答了但仍错」的题收进错题本，未作答不污染错题本
+        if(!ok && hasAns) addWrong(id);
+        got+=sc; rows.push({id:id,sc:sc,full:full,ok:ok,val:val,g:g});
+      });
+      p.submitted=true; p.result={score:got,total:total,byC:byC,byJ:byJ,byL:byL,rows:rows};
+      PAPERS[p.key]={score:got,t:Date.now()}; lsSet('papers',PAPERS);
+      S.resultOnlyWrong=false;
+      S.view='result'; paint();
+      var body=$('#exBody'); if(body) body.scrollTop=0;
+    };
+    var done=total0-blank;
+    var body = blank
+      ? '本卷共 <b>'+total0+'</b> 题，已作答 <b>'+done+'</b> 题，还有 <b>'+blank+'</b> 题空着。'
+      : '本卷 <b>'+total0+'</b> 题已全部作答，交卷后立即判分。';
+    exConfirm({
+      icon: blank ? '📄' : '✅',
+      title: blank ? '还有 '+blank+' 题未作答' : '确定交卷吗？',
+      body: body,
+      note: '交卷后不可修改答案；系统会立即判分，并在<b>每道题下方</b>依次给出正确答案、你的作答、参考答案与详解。',
+      ok: blank ? '仍然交卷' : '确定交卷',
+      cancel: blank ? '继续作答' : '再检查一下'
+    }, function(v){ if(v) doSubmit(); });
+  }
+  function startTrain(){
+    var ids;
+    if(S.trainScope==='wrong') ids=Object.keys(WRONG).map(Number);
+    else if(S.trainScope==='fav') ids=FAV.slice();
+    else ids=ITEMS.map(function(i){ return i.id; });
+    if(S.trainType!=='all') ids=ids.filter(function(id){ return byId(id).t===S.trainType; });
+    ids=ids.filter(function(id){ return !!byId(id); });
+    if(!ids.length){ exAlert({icon:'📭', title:'这个范围里还没有题目', body:'换一个题型或范围试试，也可以先去考试做一套卷子。'}); return; }
+    ids.sort(function(a,b){ var A=byId(a),B=byId(b); return A.s===B.s ? A.n-B.n : (A.s<B.s?1:-1); });
+    S.train={ids:ids,i:0,ans:{},graded:{},gradeInfo:{},draft:{},correct:0,done:0};
+    S.view='train'; paint(); touchRecent(ids[0]);
+  }
+  function pickTrain(j){
+    var t=S.train, id=t.ids[t.i], it=byId(id);
+    if(t.graded[id]!=null) return;
+    var ok=(j===it.a);
+    t.ans[id]=j; t.graded[id]=ok; t.done++; if(ok) t.correct++; else addWrong(id);
+    paint(true);
+  }
+  function gradeTrain(){
+    var t=S.train, id=t.ids[t.i], it=byId(id);
+    if(t.graded[id]!=null) return;
+    var ans=(t.draft&&t.draft[id])||'';
+    if(!ans.trim()){
+      exConfirm({icon:'✍️', title:'还没有作答', body:'这一题你还没有写下任何内容，可以直接查看参考答案与详解。',
+        ok:'直接看答案', cancel:'回去作答'}, function(v){ if(v) gradeTrainRun(ans); });
+      return;
+    }
+    gradeTrainRun(ans);
+  }
+  function gradeTrainRun(ans){
+    var t=S.train, id=t.ids[t.i], it=byId(id);
+    if(t.graded[id]!=null) return;
+    var g=gradeText(ans,it.a,ptsOf(it));
+    t.ans[id]=ans; t.gradeInfo[id]=g; t.graded[id]=(g.ratio>=0.6); t.done++;
+    if(t.graded[id]) t.correct++; else addWrong(id);
+    paint(true);
+  }
+  function trainNext(){
+    var t=S.train; t.i++;
+    if(t.i>=t.ids.length){
+      exAlert({icon:'🎉', title:'本轮练习完成', body:'共 <b>'+t.ids.length+'</b> 题，答对 <b>'+t.correct+'</b> 题，正确率 <b>'+Math.round(t.correct/t.ids.length*100)+'%</b>。',
+        ok:'返回练习'});
+      S.view='home'; S.tab='train'; paint(); return;
+    }
+    touchRecent(t.ids[t.i]); paint();
+  }
+
+  /* ---------- 事件 ---------- */
+  function closest(el,sel){ return el && el.closest ? el.closest(sel) : null; }
+
+  document.addEventListener('click', function(e){
+    var exam=$('#exam'); if(!exam || !exam.classList.contains('open')) return;
+    var el=closest(e.target,'[data-act]'); if(!el) return;
+    var act=el.getAttribute('data-act');
+
+    if(act==='view'){ S.listKind=el.getAttribute('data-kind'); S.view='list'; paint(); return; }
+    if(act==='home'){ S.view='home'; S.tab='exam'; paint(); return; }
+    if(act==='tab'){ S.tab=el.getAttribute('data-tab'); paint(); return; }
+    if(act==='ses'){ startPaper(el.getAttribute('data-key')); return; }
+    if(act==='sesAgain'){ if(S.paper) startPaper(S.paper.key); return; }
+    if(act==='type'){ S.trainType=el.getAttribute('data-v'); paint(); return; }
+    if(act==='scope'){ S.trainScope=el.getAttribute('data-v'); paint(); return; }
+    if(act==='startTrain'){ startTrain(); return; }
+    if(act==='practiceList'){
+      var ids=null;
+      if(S.listKind==='wrong') ids=Object.keys(WRONG).map(Number);
+      else if(S.listKind==='fav') ids=FAV.slice();
+      else ids=RECENT.map(function(r){ return r.id; });
+      if(!ids.length) return;
+      ids.sort(function(a,b){ var A=byId(a),B=byId(b); return A.s===B.s ? A.n-B.n : (A.s<B.s?1:-1); });
+      S.train={ids:ids,i:0,ans:{},graded:{},gradeInfo:{},draft:{},correct:0,done:0};
+      S.view='train'; paint(); touchRecent(ids[0]); return;
+    }
+    if(act==='openItem'){
+      var id=+el.getAttribute('data-id');
+      S.train={ids:[id],i:0,ans:{},graded:{},gradeInfo:{},draft:{},correct:0,done:0};
+      S.view='train'; paint(); touchRecent(id); return;
+    }
+    if(act==='opt'){ var j=+el.getAttribute('data-j');
+      if(S.view==='paper'){ var p=S.paper; if(p.submitted) return; p.ans[p.ids[p.cur]]=j; paint(true); }
+      else if(S.view==='train') pickTrain(j);
+      return; }
+    if(act==='prev'){ if(S.paper.cur>0){ S.paper.cur--; paint(); } return; }
+    if(act==='next'){ if(S.paper.cur<S.paper.ids.length-1){ S.paper.cur++; paint(); } return; }
+    if(act==='goto'){ S.paper.cur=+el.getAttribute('data-i'); paint(); return; }
+    if(act==='submitPaper'){ submitPaper(); return; }
+    if(act==='gradeTrain'){ gradeTrain(); return; }
+    if(act==='trainNext'){ trainNext(); return; }
+    if(act==='self'){
+      var t=S.train, tid=t.ids[t.i], ok=el.getAttribute('data-ok')==='1';
+      var was=t.graded[tid];
+      t.graded[tid]=ok;
+      if(ok){ if(!was) t.correct++; delWrong(tid); } else { if(was) t.correct--; addWrong(tid); }
+      paint(true); return; }
+    if(act==='fav'){ var fid=+el.getAttribute('data-id'); toggleFav(fid);
+      // 局部刷新星标，避免整页重绘
+      document.querySelectorAll('[data-act="fav"][data-id="'+fid+'"]').forEach(function(b){
+        var on=isFav(fid); b.classList.toggle('on',on); b.textContent=on?'★':'☆'; });
+      return; }
+    if(act==='theme'){ setTheme(THEME==='day' ? 'night' : 'day'); return; }
+    if(act==='clue'){ clueOpen(+el.getAttribute('data-id')); return; }
+    if(act==='clueClose'){ clueClose(); return; }
+    if(act==='clueKp'){ clueShow(+el.getAttribute('data-kp'), DW.item);
+      var _bd=_el('excBody'); if(_bd) _bd.scrollTop=0; return; }
+    if(act==='clueGo'){ clueGoto(+el.getAttribute('data-id')); return; }
+    if(act==='clueSky'){ clueSky(+el.getAttribute('data-kp')); return; }
+    if(act==='clueChapter'){ clueChapter(+el.getAttribute('data-kp')); return; }
+    if(act==='toggleItem'){ var it=el.parentNode; if(it) it.classList.toggle('open'); return; }
+    if(act==='onlyWrong'){ S.resultOnlyWrong=!S.resultOnlyWrong; paint(); return; }
+    if(act==='allOpen'){ document.querySelectorAll('#exBody .ex-ritem').forEach(function(x){ x.classList.add('open'); }); return; }
+    if(act==='allClose'){ document.querySelectorAll('#exBody .ex-ritem').forEach(function(x){ x.classList.remove('open'); }); return; }
+    if(act==='clearWrong'){
+      exConfirm({icon:'🗑', title:'清空错题本？', body:'将删除全部 <b>'+Object.keys(WRONG).length+'</b> 道错题记录，此操作不可撤销。',
+        ok:'确定清空', cancel:'再想想', danger:true}, function(v){
+          if(v){ WRONG={}; lsSet('wrong',WRONG); updCounts(); paint(); }
+        }); return; }
+    if(act==='clearFav'){
+      exConfirm({icon:'⭐', title:'清空收藏？', body:'将解除全部 <b>'+FAV.length+'</b> 道题的收藏，此操作不可撤销。',
+        ok:'确定清空', cancel:'再想想', danger:true}, function(v){
+          if(v){ FAV=[]; lsSet('fav',FAV); updCounts(); paint(); }
+        }); return; }
+  });
+
+  // 简答输入实时存草稿（不重绘）
+  document.addEventListener('input', function(e){
+    var ta=closest(e.target,'.ex-ta'); if(!ta) return;
+    var id=+ta.getAttribute('data-id');
+    if(S.view==='paper' && S.paper){ S.paper.ans[id]=ta.value; }
+    else if(S.view==='train' && S.train){ S.train.draft[id]=ta.value; }
+  });
+
+  // Esc 关闭
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Escape') return;
+    if(exmIsOpen()){ exmClose(false); return; }
+    var exam=$('#exam'); if(!exam || !exam.classList.contains('open')) return;
+    if(DW.open){ clueClose(); return; }
+    if(S.view==='home'){ closeExam(); } else { S.view='home'; paint(); }
+  });
+
+  /* ---------- 打开 / 关闭 ---------- */
+  function openExam(){
+    var exam=$('#exam'); if(!exam) return;
+    exam.classList.add('open');
+    document.body.classList.add('exam-open');
+    S.view='home'; S.tab='exam'; paint(); updCounts();
+  }
+  function closeExam(){
+    clueClose();
+    var exam=$('#exam'); if(exam) exam.classList.remove('open');
+    document.body.classList.remove('exam-open');
+  }
+
+  var btn=document.getElementById('btnPractice');
+  if(btn) btn.addEventListener('click', openExam);
+  var back=document.getElementById('exBack');
+  if(back) back.addEventListener('click', function(){
+    if(S.view==='home'){ closeExam(); return; }
+    if(S.view==='paper' && !S.paper.submitted){
+      exConfirm({icon:'⚠️', title:'试卷还没交', body:'当前答题进度尚未提交，离开后本次作答不会判分。',
+        ok:'仍然离开', cancel:'继续作答', danger:true}, function(v){
+          if(v){ S.view='home'; S.tab='exam'; paint(); }
+        });
+      return;
+    }
+    S.view='home'; S.tab='exam'; paint();
+  });
+
+  window.__exam={open:openExam, close:closeExam, state:S, data:DB};
+})();
+
+</script>
+</body>
+</html>
